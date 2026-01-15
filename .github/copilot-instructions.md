@@ -40,6 +40,12 @@ dotnet run --project SnipShot/SnipShot.csproj
 dotnet publish -c Release -r win-x64  # or win-arm64
 ```
 
+## GitHub Releases & Updates
+- **UpdateService** (`Services/UpdateService.cs`) - Consulta GitHub API para verificar nuevas versiones
+- **Versioning**: Tag format `v1.0.0`, actualizar `Package.appxmanifest` y `UpdateService.CurrentVersion`
+- **Release assets**: Subir `.msixbundle` y `.cer` a cada release
+- **UI**: Sección "Actualizaciones" en SettingsView con verificación manual
+
 ## Conventions
 - **Nullable enabled** - Always use `?` for optional references
 - **Spanish XML docs**: `/// <summary>Descripción en español</summary>`

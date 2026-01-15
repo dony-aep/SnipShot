@@ -459,10 +459,11 @@
                               FontWeight="SemiBold"/>
                     
                     <StackPanel Spacing="8">
-                        <TextBlock Text="SnipShot 1.0.0.0"
+                        <TextBlock x:Name="VersionText"
+                                  Text="SnipShot 1.0.0.0"
                                   FontSize="14"/>
                         
-                        <TextBlock Text="© 2025 SnipShot. Todos los derechos reservados."
+                        <TextBlock Text="© 2026 SnipShot. Todos los derechos reservados."
                                   FontSize="12"
                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                   Margin="0,0,0,8"/>
@@ -470,6 +471,50 @@
                         <HyperlinkButton Content="Sitio web" 
                                        NavigateUri="https://snipshot.com"/>
                     </StackPanel>
+
+                    <!-- Actualizaciones -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            CornerRadius="8"
+                            Padding="16"
+                            Margin="0,8,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Spacing="4">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE895;" FontSize="16"/>
+                                    <TextBlock Text="Actualizaciones" FontWeight="SemiBold"/>
+                                </StackPanel>
+                                <TextBlock x:Name="UpdateStatusText"
+                                          Text="Verifica si hay nuevas versiones disponibles"
+                                          Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                          FontSize="12"
+                                          TextWrapping="Wrap"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" 
+                                       Orientation="Horizontal" 
+                                       Spacing="8"
+                                       VerticalAlignment="Center">
+                                <ProgressRing x:Name="UpdateProgressRing"
+                                             IsActive="False"
+                                             Width="20"
+                                             Height="20"
+                                             Visibility="Collapsed"/>
+                                <Button x:Name="CheckUpdatesButton"
+                                       Content="Buscar actualizaciones"
+                                       Click="CheckUpdatesButton_Click"/>
+                                <Button x:Name="DownloadUpdateButton"
+                                       Content="Descargar"
+                                       Style="{ThemeResource AccentButtonStyle}"
+                                       Visibility="Collapsed"
+                                       Click="DownloadUpdateButton_Click"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>

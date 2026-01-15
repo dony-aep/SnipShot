@@ -556,5 +556,66 @@ namespace SnipShot.Views
         }
 
         #endregion
+
+        #region Actualizaciones
+
+        private string? _pendingDownloadUrl;
+
+        private async void CheckUpdatesButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Mostrar estado de carga
+            UpdateProgressRing.Visibility = Visibility.Visible;
+            UpdateProgressRing.IsActive = true;
+            CheckUpdatesButton.IsEnabled = false;
+            DownloadUpdateButton.Visibility = Visibility.Collapsed;
+            UpdateStatusText.Text = "Buscando actualizaciones...";
+
+            try
+            {
+                var result = await UpdateService.CheckForUpdatesAsync();
+
+                if (!result.Success)
+                {
+                    UpdateStatusText.Text = result.ErrorMessage;
+                    return;
+                }
+
+                if (result.IsUpdateAvailable)
+                {
+                    UpdateStatusText.Text = $"¡Nueva versión disponible! v{result.LatestVersion}";
+                    _pendingDownloadUrl = result.ReleasePageUrl;
+                    DownloadUpdateButton.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    UpdateStatusText.Text = $"Estás usando la versión más reciente (v{UpdateService.CurrentVersion})";
+                }
+            }
+            catch (Exception ex)
+            {
+                UpdateStatusText.Text = $"Error: {ex.Message}";
+            }
+            finally
+            {
+                UpdateProgressRing.IsActive = false;
+                UpdateProgressRing.Visibility = Visibility.Collapsed;
+                CheckUpdatesButton.IsEnabled = true;
+            }
+        }
+
+        private async void DownloadUpdateButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!string.IsNullOrEmpty(_pendingDownloadUrl))
+            {
+                await UpdateService.OpenDownloadPageAsync(_pendingDownloadUrl);
+            }
+            else
+            {
+                // Fallback: abrir página de releases
+                await UpdateService.OpenDownloadPageAsync(UpdateService.ReleasesPageUrl);
+            }
+        }
+
+        #endregion
     }
 }
