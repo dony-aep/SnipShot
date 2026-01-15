@@ -2,6 +2,7 @@ using System;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Windows.ApplicationModel;
 using Windows.System;
 
 namespace SnipShot.Services
@@ -18,9 +19,25 @@ namespace SnipShot.Services
         private static readonly HttpClient _httpClient = new();
         
         /// <summary>
-        /// Versión actual de la aplicación (extraída del Package.appxmanifest)
+        /// Versión actual de la aplicación (leída del Package.appxmanifest automáticamente).
+        /// Solo necesito actualizar la versión en Package.appxmanifest.
         /// </summary>
-        public static Version CurrentVersion => new("1.0.0.0");
+        public static Version CurrentVersion
+        {
+            get
+            {
+                try
+                {
+                    var packageVersion = Package.Current.Id.Version;
+                    return new Version(packageVersion.Major, packageVersion.Minor, packageVersion.Build, packageVersion.Revision);
+                }
+                catch
+                {
+                    // Fallback para debugging sin paquete instalado
+                    return new Version("1.0.0.0");
+                }
+            }
+        }
 
         /// <summary>
         /// Resultado de la verificación de actualizaciones
