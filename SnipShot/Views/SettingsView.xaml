@@ -1,0 +1,477 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="SnipShot.Views.SettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SnipShot.Views"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Barra superior de configuración -->
+        <Grid Grid.Row="0" Padding="10,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Botón volver -->
+            <Button x:Name="BackButton"
+                   Grid.Column="0"
+                   Click="BackButton_Click"
+                   ToolTipService.ToolTip="Volver"
+                   VerticalAlignment="Center"
+                   Background="Transparent"
+                   BorderBrush="Transparent">
+                <FontIcon Glyph="&#xE72B;" FontSize="16"/>
+            </Button>
+
+            <!-- Título de configuración -->
+            <StackPanel Grid.Column="1" 
+                       Orientation="Vertical" 
+                       VerticalAlignment="Center"
+                       Margin="15,0,0,0">
+                <TextBlock Text="Configuración" 
+                          FontSize="28" 
+                          FontWeight="Bold"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Contenido de configuración -->
+        <ScrollViewer Grid.Row="1" Padding="20,10">
+            <StackPanel Spacing="20">
+                <!-- Sección: Apariencia -->
+                <StackPanel Spacing="15">
+                    <TextBlock Text="Apariencia" 
+                              FontSize="18" 
+                              FontWeight="SemiBold"/>
+                    
+                    <Expander HorizontalAlignment="Stretch"
+                              HorizontalContentAlignment="Stretch"
+                              IsExpanded="False">
+                        <Expander.Header>
+                            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,10">
+                                <FontIcon Glyph="&#xE790;" FontSize="16"/>
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Tema de la aplicación" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="ThemeSelectionText"
+                                              Text="Sistema"
+                                              FontSize="12"
+                                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Expander.Header>
+                        <Expander.Content>
+                            <RadioButtons x:Name="ThemeRadioButtons" 
+                                        SelectionChanged="ThemeRadioButtons_SelectionChanged">
+                                <RadioButton Content="Claro" 
+                                           Tag="Light"
+                                           Margin="0,4,0,4"/>
+                                <RadioButton Content="Oscuro" 
+                                           Tag="Dark"
+                                           Margin="0,4,0,4"/>
+                                <RadioButton Content="Sistema" 
+                                           Tag="Default"
+                                           Margin="0,4,0,4"/>
+                            </RadioButtons>
+                        </Expander.Content>
+                    </Expander>
+                </StackPanel>
+
+                <!-- Sección: General -->
+                <StackPanel Spacing="15">
+                    <TextBlock Text="General" 
+                              FontSize="18" 
+                              FontWeight="SemiBold"/>
+                    
+                    <StackPanel Spacing="4">
+                        <Expander HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Stretch">
+                            <Expander.Header>
+                                <Grid ColumnDefinitions="*,Auto" Margin="0,10">
+                                    <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="Guardar automáticamente las capturas originales"
+                                                   FontWeight="SemiBold"
+                                                   TextWrapping="Wrap"/>
+                                        <TextBlock Text="Mantén una copia original en tu carpeta preferida"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   FontSize="12"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+
+                                    <ToggleSwitch x:Name="AutoSaveToggle"
+                                                  Grid.Column="1"
+                                                  HorizontalAlignment="Right"
+                                                  OnContent="Activado"
+                                                  OffContent="Desactivado"
+                                                  Margin="0"
+                                                  Toggled="AutoSaveToggle_Toggled"/>
+                                </Grid>
+                            </Expander.Header>
+                            <Expander.Content>
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="Las capturas se guardan en:"
+                                              FontWeight="SemiBold"/>
+                                    <Grid ColumnDefinitions="*,Auto,Auto"
+                                          ColumnSpacing="8"
+                                          VerticalAlignment="Center">
+                                        <TextBlock x:Name="AutoSavePathText"
+                                                   Grid.Column="0"
+                                                   TextWrapping="Wrap"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   VerticalAlignment="Center"
+                                                   Loaded="AutoSavePathText_Loaded"/>
+                                        <Button Grid.Column="1"
+                                                Content="Abrir carpeta"
+                                                Click="OpenAutoSaveFolder_Click"/>
+                                        <Button Grid.Column="2"
+                                                Content="Cambiar ruta"
+                                                Click="ChangeAutoSaveFolder_Click"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Expander.Content>
+                        </Expander>
+                        
+                        <!-- Ocultar aplicación al capturar -->
+                        <Border Background="{ThemeResource ExpanderHeaderBackground}"
+                                BorderBrush="{ThemeResource ExpanderHeaderBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="16,12,60,12">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="Ocultar aplicación al capturar"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock Text="Oculta la ventana principal durante la captura de pantalla"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               FontSize="12"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+
+                                <ToggleSwitch x:Name="HideOnCaptureToggle"
+                                              Grid.Column="1"
+                                              HorizontalAlignment="Right"
+                                              OnContent="Activado"
+                                              OffContent="Desactivado"
+                                              Margin="0"
+                                              Toggled="HideOnCaptureToggle_Toggled"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Minimizar a bandeja del sistema al cerrar -->
+                        <Border Background="{ThemeResource ExpanderHeaderBackground}"
+                                BorderBrush="{ThemeResource ExpanderHeaderBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="16,12,60,12">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="Minimizar a la bandeja del sistema al cerrar"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock Text="La aplicación seguirá ejecutándose en segundo plano"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               FontSize="12"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+
+                                <ToggleSwitch x:Name="MinimizeToTrayToggle"
+                                              Grid.Column="1"
+                                              HorizontalAlignment="Right"
+                                              OnContent="Activado"
+                                              OffContent="Desactivado"
+                                              IsOn="True"
+                                              Margin="0"
+                                              Toggled="MinimizeToTrayToggle_Toggled"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Iniciar con Windows -->
+                        <Border Background="{ThemeResource ExpanderHeaderBackground}"
+                                BorderBrush="{ThemeResource ExpanderHeaderBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="16,12,60,12">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="Iniciar con Windows"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock Text="Ejecutar SnipShot automáticamente al iniciar sesión"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               FontSize="12"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+
+                                <ToggleSwitch x:Name="StartWithWindowsToggle"
+                                              Grid.Column="1"
+                                              HorizontalAlignment="Right"
+                                              OnContent="Activado"
+                                              OffContent="Desactivado"
+                                              Margin="0"
+                                              Toggled="StartWithWindowsToggle_Toggled"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Sección: Accesibilidad -->
+                <StackPanel Spacing="15">
+                    <TextBlock Text="Accesibilidad"
+                              FontSize="18"
+                              FontWeight="SemiBold"/>
+
+                    <Border Background="{ThemeResource ExpanderHeaderBackground}"
+                            BorderBrush="{ThemeResource ExpanderHeaderBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="16,12,60,12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                <TextBlock Text="Confirmar al eliminar una captura"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="Muestra un diálogo antes de eliminar la captura actual"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           FontSize="12"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+
+                            <ToggleSwitch x:Name="ConfirmDeleteToggle"
+                                          Grid.Column="1"
+                                          HorizontalAlignment="Right"
+                                          OnContent="Activado"
+                                          OffContent="Desactivado"
+                                          Margin="0"
+                                          Toggled="ConfirmDeleteToggle_Toggled"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <!-- Sección: Bordes -->
+                <StackPanel Spacing="15">
+                    <TextBlock Text="Bordes" 
+                              FontSize="18" 
+                              FontWeight="SemiBold"/>
+                    
+                    <Expander HorizontalAlignment="Stretch"
+                              HorizontalContentAlignment="Stretch">
+                        <Expander.Header>
+                            <Grid ColumnDefinitions="*,Auto" Margin="0,10">
+                                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="Borde de captura" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Añade un borde alrededor de la imagen capturada"
+                                              FontSize="12"
+                                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+
+                                <ToggleSwitch x:Name="BorderToggle"
+                                              Grid.Column="1"
+                                              HorizontalAlignment="Right"
+                                              OnContent="Activado"
+                                              OffContent="Desactivado"
+                                              Margin="0"
+                                              Toggled="BorderToggle_Toggled"/>
+                            </Grid>
+                        </Expander.Header>
+                        <Expander.Content>
+                            <StackPanel Spacing="12">
+                                
+                                <!-- Preview -->
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Vista previa" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <Grid HorizontalAlignment="Center" MinHeight="180" Padding="20">
+                                        <Border x:Name="BorderPreviewElement"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                BorderBrush="Black"
+                                                BorderThickness="1">
+                                            <Grid Width="220" Height="140" Background="{ThemeResource LayerFillColorAltBrush}">
+                                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                                                    <FontIcon Glyph="&#xE74E;" FontSize="24" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                                                    <TextBlock Text="Captura" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+                                </StackPanel>
+                                
+                                <!-- Color -->
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="Color" VerticalAlignment="Center"/>
+                                    <Button x:Name="BorderColorButton"
+                                            Grid.Column="1"
+                                            Width="40"
+                                            Height="40"
+                                            Padding="4"
+                                            CornerRadius="4"
+                                            Click="BorderColorButton_Click"
+                                            ToolTipService.ToolTip="Cambiar color">
+                                        <Border x:Name="BorderColorPreview"
+                                                Width="32"
+                                                Height="32"
+                                                CornerRadius="2"
+                                                Background="Black"/>
+                                    </Button>
+                                </Grid>
+                                
+                                <!-- Thickness -->
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="Grosor (px)" VerticalAlignment="Center"/>
+                                    <Slider x:Name="BorderThicknessSlider"
+                                            Grid.Column="1"
+                                            Width="200"
+                                            Minimum="1"
+                                            Maximum="32"
+                                            Value="1"
+                                            VerticalAlignment="Center"
+                                            ValueChanged="BorderThicknessSlider_ValueChanged"/>
+                                </Grid>
+                            </StackPanel>
+                        </Expander.Content>
+                    </Expander>
+                </StackPanel>
+
+                <!-- Sección: Atajos de teclado -->
+                <StackPanel Spacing="15">
+                    <TextBlock Text="Atajos de Teclado" 
+                              FontSize="18" 
+                              FontWeight="SemiBold"/>
+                    
+                    <StackPanel Spacing="10">
+                        <!-- InfoBar de advertencia para Snipping Tool -->
+                        <InfoBar x:Name="SnippingToolWarningInfoBar"
+                                 Title="Snipping Tool está usando Print Screen"
+                                 Message="Windows tiene configurada la tecla Print Screen para abrir Snipping Tool. Para usar Print Screen con SnipShot, desactiva esta opción en la configuración de Windows."
+                                 Severity="Warning"
+                                 IsOpen="False"
+                                 IsClosable="True">
+                            <InfoBar.ActionButton>
+                                <Button Content="Abrir configuración de Windows"
+                                        Click="OpenWindowsKeyboardSettings_Click"/>
+                            </InfoBar.ActionButton>
+                        </InfoBar>
+
+                        <!-- Toggle Print Screen -->
+                        <Border Background="{ThemeResource ExpanderHeaderBackground}"
+                                BorderBrush="{ThemeResource ExpanderHeaderBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="16,12,60,12">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="Usar Print Screen para capturar"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock Text="Presiona la tecla Print Screen para iniciar una captura"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               FontSize="12"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+
+                                <ToggleSwitch x:Name="PrintScreenHotkeyToggle"
+                                              Grid.Column="1"
+                                              HorizontalAlignment="Right"
+                                              OnContent="Activado"
+                                              OffContent="Desactivado"
+                                              Margin="0"
+                                              Toggled="PrintScreenHotkeyToggle_Toggled"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Toggle Ctrl+Shift+S -->
+                        <Border Background="{ThemeResource ExpanderHeaderBackground}"
+                                BorderBrush="{ThemeResource ExpanderHeaderBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="16,12,60,12">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="Usar Ctrl+Shift+S para capturar"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock Text="Atajo de teclado alternativo para iniciar una captura"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               FontSize="12"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+
+                                <ToggleSwitch x:Name="CtrlShiftSHotkeyToggle"
+                                              Grid.Column="1"
+                                              HorizontalAlignment="Right"
+                                              OnContent="Activado"
+                                              OffContent="Desactivado"
+                                              Margin="0"
+                                              Toggled="CtrlShiftSHotkeyToggle_Toggled"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Guía de ayuda -->
+                        <Expander HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Stretch"
+                                  IsExpanded="False">
+                            <Expander.Header>
+                                <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,10">
+                                    <FontIcon Glyph="&#xE946;" FontSize="16"/>
+                                    <TextBlock Text="¿Cómo activar Print Screen para SnipShot?" FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Expander.Header>
+                            <Expander.Content>
+                                <StackPanel Spacing="8" Padding="0,8,0,0">
+                                    <TextBlock TextWrapping="Wrap">
+                                        <Run Text="Para usar la tecla Print Screen con SnipShot, debes desactivar la opción de Windows:"/>
+                                    </TextBlock>
+                                    <TextBlock TextWrapping="Wrap" Margin="12,0,0,0">
+                                        <Run Text="1. Abre"/>
+                                        <Run Text="Configuración" FontWeight="SemiBold"/>
+                                        <Run Text="→"/>
+                                        <Run Text="Accesibilidad" FontWeight="SemiBold"/>
+                                        <Run Text="→"/>
+                                        <Run Text="Teclado" FontWeight="SemiBold"/>
+                                    </TextBlock>
+                                    <TextBlock TextWrapping="Wrap" Margin="12,0,0,0">
+                                        <Run Text="2. Desactiva la opción"/>
+                                        <Run Text="'Usar la tecla Imprimir pantalla para abrir recorte de pantalla'" FontWeight="SemiBold"/>
+                                    </TextBlock>
+                                    <TextBlock TextWrapping="Wrap" Margin="12,0,0,0">
+                                        <Run Text="3. Vuelve aquí y activa la opción de Print Screen"/>
+                                    </TextBlock>
+                                    <Button Content="Abrir configuración de Windows"
+                                            Click="OpenWindowsKeyboardSettings_Click"
+                                            Margin="0,8,0,0"/>
+                                </StackPanel>
+                            </Expander.Content>
+                        </Expander>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Sección: Acerca de -->
+                <StackPanel Spacing="15">
+                    <TextBlock Text="Acerca de" 
+                              FontSize="18" 
+                              FontWeight="SemiBold"/>
+                    
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="SnipShot 1.0.0.0"
+                                  FontSize="14"/>
+                        
+                        <TextBlock Text="© 2025 SnipShot. Todos los derechos reservados."
+                                  FontSize="12"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                  Margin="0,0,0,8"/>
+                        
+                        <HyperlinkButton Content="Sitio web" 
+                                       NavigateUri="https://snipshot.com"/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

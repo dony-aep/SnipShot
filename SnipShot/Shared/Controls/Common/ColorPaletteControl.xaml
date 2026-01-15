@@ -1,0 +1,498 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="SnipShot.Shared.Controls.Common.ColorPaletteControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SnipShot.Shared.Controls.Common"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <StackPanel Spacing="10">
+        <TextBlock x:Name="TitleText" Text="" FontWeight="SemiBold" Visibility="Collapsed"/>
+        
+        <!-- Standard Color Palette (15 colors, 3 rows) -->
+        <Grid x:Name="StandardColorGrid"
+              HorizontalAlignment="Center"
+              ColumnSpacing="6"
+              RowSpacing="6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Row 0 -->
+            <Button Grid.Row="0" Grid.Column="0" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFFFFFF" ToolTipService.ToolTip="Blanco">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFFFFFF"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="1" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF000000" ToolTipService.ToolTip="Negro">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF000000"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="2" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFF0000" ToolTipService.ToolTip="Rojo">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFF0000"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="3" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFF8C00" ToolTipService.ToolTip="Naranja">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFF8C00"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="4" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFFC0CB" ToolTipService.ToolTip="Rosa">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFFC0CB"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+
+            <!-- Row 1 -->
+            <Button Grid.Row="1" Grid.Column="0" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFFFF00" ToolTipService.ToolTip="Amarillo">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFFFF00"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="1" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF00FF00" ToolTipService.ToolTip="Verde">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF00FF00"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="2" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF00FFFF" ToolTipService.ToolTip="Cian">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF00FFFF"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="3" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF1E90FF" ToolTipService.ToolTip="Azul claro">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF1E90FF"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="4" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF8B4513" ToolTipService.ToolTip="Marrón">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF8B4513"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+
+            <!-- Row 2 -->
+            <Button Grid.Row="2" Grid.Column="0" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF0000FF" ToolTipService.ToolTip="Azul">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF0000FF"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="2" Grid.Column="1" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFF00FF" ToolTipService.ToolTip="Magenta">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFF00FF"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="2" Grid.Column="2" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF800080" ToolTipService.ToolTip="Morado">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF800080"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="2" Grid.Column="3" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF808080" ToolTipService.ToolTip="Gris">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF808080"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="2" Grid.Column="4" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF4B0082" ToolTipService.ToolTip="Índigo">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF4B0082"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+        </Grid>
+
+        <!-- Highlighter Color Palette (10 colors, 2 rows) - Semi-transparent colors -->
+        <Grid x:Name="HighlighterColorGrid"
+              HorizontalAlignment="Center"
+              ColumnSpacing="6"
+              RowSpacing="6"
+              Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Row 0 - Typical highlighter colors -->
+            <Button Grid.Row="0" Grid.Column="0" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#80FFFF00" ToolTipService.ToolTip="Amarillo">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFFFF00"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="1" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#8000FF00" ToolTipService.ToolTip="Verde">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF00FF00"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="2" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#8000FFFF" ToolTipService.ToolTip="Cian">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF00FFFF"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="3" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#80FF00FF" ToolTipService.ToolTip="Magenta">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFF00FF"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="4" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#80FFA500" ToolTipService.ToolTip="Naranja">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFFA500"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+
+            <!-- Row 1 -->
+            <Button Grid.Row="1" Grid.Column="0" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#80FF69B4" ToolTipService.ToolTip="Rosa">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFF69B4"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="1" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#8087CEEB" ToolTipService.ToolTip="Azul claro">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF87CEEB"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="2" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#80DDA0DD" ToolTipService.ToolTip="Lavanda">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFDDA0DD"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="3" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#8098FB98" ToolTipService.ToolTip="Verde claro">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF98FB98"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="4" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#80FFB6C1" ToolTipService.ToolTip="Rosa claro">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFFB6C1"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+        </Grid>
+
+        <!-- Pen Color Palette (10 colors, 2 rows) -->
+        <Grid x:Name="PenColorGrid"
+              HorizontalAlignment="Center"
+              ColumnSpacing="6"
+              RowSpacing="6"
+              Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Row 0 -->
+            <Button Grid.Row="0" Grid.Column="0" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF000000" ToolTipService.ToolTip="Negro">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF000000"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="1" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFF0000" ToolTipService.ToolTip="Rojo">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFF0000"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="2" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF0000FF" ToolTipService.ToolTip="Azul">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF0000FF"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="3" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF00FF00" ToolTipService.ToolTip="Verde">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF00FF00"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="4" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF800080" ToolTipService.ToolTip="Morado">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF800080"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+
+            <!-- Row 1 -->
+            <Button Grid.Row="1" Grid.Column="0" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFFFFFF" ToolTipService.ToolTip="Blanco">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFFFFFF"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="1" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFF8C00" ToolTipService.ToolTip="Naranja">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFF8C00"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="2" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF1E90FF" ToolTipService.ToolTip="Azul claro">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF1E90FF"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="3" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF8B4513" ToolTipService.ToolTip="Marrón">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF8B4513"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="4" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF808080" ToolTipService.ToolTip="Gris">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF808080"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+        </Grid>
+
+        <!-- Text Color Palette (20 colors, 4 rows) -->
+        <Grid x:Name="TextColorGrid"
+              HorizontalAlignment="Center"
+              ColumnSpacing="6"
+              RowSpacing="6"
+              Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Row 0 -->
+            <Button Grid.Row="0" Grid.Column="0" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFFFFFF" ToolTipService.ToolTip="Blanco">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFFFFFF"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="1" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF000000" ToolTipService.ToolTip="Negro">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF000000"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="2" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFF0000" ToolTipService.ToolTip="Rojo">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFF0000"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="3" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFF8C00" ToolTipService.ToolTip="Naranja">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFF8C00"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="4" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFFC0CB" ToolTipService.ToolTip="Rosa">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFFC0CB"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="5" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFDC143C" ToolTipService.ToolTip="Carmesí">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFDC143C"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+
+            <!-- Row 1 -->
+            <Button Grid.Row="1" Grid.Column="0" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFFFF00" ToolTipService.ToolTip="Amarillo">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFFFF00"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="1" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF00FF00" ToolTipService.ToolTip="Verde">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF00FF00"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="2" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF00FFFF" ToolTipService.ToolTip="Cian">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF00FFFF"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="3" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF1E90FF" ToolTipService.ToolTip="Azul Dodger">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF1E90FF"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="4" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF8B4513" ToolTipService.ToolTip="Marrón">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF8B4513"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="5" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF228B22" ToolTipService.ToolTip="Verde bosque">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF228B22"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+
+            <!-- Row 2 -->
+            <Button Grid.Row="2" Grid.Column="0" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF0000FF" ToolTipService.ToolTip="Azul">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF0000FF"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="2" Grid.Column="1" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFF00FF" ToolTipService.ToolTip="Magenta">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFF00FF"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="2" Grid.Column="2" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF800080" ToolTipService.ToolTip="Morado">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF800080"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="2" Grid.Column="3" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF808080" ToolTipService.ToolTip="Gris">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF808080"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="2" Grid.Column="4" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF4B0082" ToolTipService.ToolTip="Índigo">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF4B0082"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="2" Grid.Column="5" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF008080" ToolTipService.ToolTip="Verde azulado">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF008080"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+        </Grid>
+
+        <!-- Text Highlight Color Palette (15 colors + transparent, 3 rows) -->
+        <Grid x:Name="TextHighlightColorGrid"
+              HorizontalAlignment="Center"
+              ColumnSpacing="6"
+              RowSpacing="6"
+              Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Row 0 -->
+            <Button Grid.Row="0" Grid.Column="0" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#00000000" ToolTipService.ToolTip="Sin fondo">
+                <Border Width="34" Height="34" CornerRadius="8" Background="Transparent"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                    <Grid>
+                        <Line X1="0" Y1="34" X2="34" Y2="0" Stroke="#FFFF0000" StrokeThickness="2"/>
+                    </Grid>
+                </Border>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="1" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFFFF00" ToolTipService.ToolTip="Amarillo">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFFFF00"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="2" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF00FF00" ToolTipService.ToolTip="Verde brillante">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF00FF00"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="3" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF00FFFF" ToolTipService.ToolTip="Cian">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF00FFFF"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="4" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFF00FF" ToolTipService.ToolTip="Magenta">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFF00FF"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="0" Grid.Column="5" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFFA500" ToolTipService.ToolTip="Naranja">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFFA500"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+
+            <!-- Row 1 -->
+            <Button Grid.Row="1" Grid.Column="0" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFF69B4" ToolTipService.ToolTip="Rosa intenso">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFF69B4"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="1" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF87CEEB" ToolTipService.ToolTip="Azul cielo">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF87CEEB"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="2" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFDDA0DD" ToolTipService.ToolTip="Lavanda">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFDDA0DD"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="3" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FF98FB98" ToolTipService.ToolTip="Verde pálido">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FF98FB98"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="4" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFFB6C1" ToolTipService.ToolTip="Rosa claro">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFFB6C1"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="1" Grid.Column="5" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFAFAD2" ToolTipService.ToolTip="Amarillo claro">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFAFAD2"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+
+            <!-- Row 2 -->
+            <Button Grid.Row="2" Grid.Column="0" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFE0FFFF" ToolTipService.ToolTip="Cian claro">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFE0FFFF"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="2" Grid.Column="1" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFE6E6FA" ToolTipService.ToolTip="Lavanda claro">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFE6E6FA"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="2" Grid.Column="2" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFFEFD5" ToolTipService.ToolTip="Papaya">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFFEFD5"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="2" Grid.Column="3" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFF0FFF0" ToolTipService.ToolTip="Verde miel">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFF0FFF0"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="2" Grid.Column="4" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFFF0F5" ToolTipService.ToolTip="Rosa lavanda">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFFF0F5"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+            <Button Grid.Row="2" Grid.Column="5" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                Click="ColorButton_Click" Tag="#FFFFFFFF" ToolTipService.ToolTip="Blanco">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#FFFFFFFF"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+            </Button>
+        </Grid>
+    </StackPanel>
+</UserControl>

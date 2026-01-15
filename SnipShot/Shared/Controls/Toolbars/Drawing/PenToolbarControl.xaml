@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="SnipShot.Shared.Controls.Toolbars.Drawing.PenToolbarControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SnipShot.Shared.Controls.Toolbars.Drawing"
+    xmlns:common="using:SnipShot.Shared.Controls.Common"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <StackPanel Orientation="Vertical" Spacing="14" MinWidth="220">
+        <!-- Sección de color del bolígrafo -->
+        <StackPanel Spacing="10">
+            <TextBlock Text="Color del bolígrafo" FontWeight="SemiBold"/>
+            <common:ColorPaletteControl x:Name="ColorPalette" ColorSelected="ColorPalette_ColorSelected"/>
+        </StackPanel>
+
+        <!-- Sección de tamaño del bolígrafo -->
+        <common:ThicknessSliderControl x:Name="ThicknessControl" 
+                                      Title="Tamaño"
+                                      Minimum="1"
+                                      Maximum="12"
+                                      Thickness="2"
+                                      ThicknessChanged="ThicknessControl_ThicknessChanged"/>
+    </StackPanel>
+</UserControl>

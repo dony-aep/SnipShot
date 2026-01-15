@@ -1,0 +1,517 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="SnipShot.Features.Editor.ImageEditorControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SnipShot.Features.Editor"
+    xmlns:shapes="using:SnipShot.Shared.Controls.Toolbars.Shapes"
+    xmlns:drawing="using:SnipShot.Shared.Controls.Toolbars.Drawing"
+    xmlns:textToolbars="using:SnipShot.Shared.Controls.Toolbars.Text"
+    xmlns:emoji="using:SnipShot.Shared.Controls.Toolbars.Emoji"
+    xmlns:common="using:SnipShot.Shared.Controls.Common"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid x:Name="RootGrid"
+          PointerPressed="RootGrid_PointerPressed">
+        <!-- Área de edición de imagen con toolbars flotantes superpuestos -->
+        <ScrollViewer x:Name="EditorScrollViewer"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch"
+                      Background="Transparent"
+                      ZoomMode="Enabled"
+                      MinZoomFactor="0.1"
+                      MaxZoomFactor="10.0">
+            <Grid x:Name="ImageContainer"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  PointerPressed="ImageContainer_PointerPressed"
+                  PointerMoved="ImageContainer_PointerMoved"
+                  PointerReleased="ImageContainer_PointerReleased"
+                  PointerCaptureLost="ImageContainer_PointerCaptureLost"
+                  RightTapped="ImageContainer_RightTapped">
+                
+                <!-- Imagen base -->
+                <Image x:Name="EditorImage"
+                       Stretch="None"/>
+                
+                <!-- Canvas para anotaciones -->
+                <Canvas x:Name="AnnotationsCanvas"
+                        IsHitTestVisible="True"/>
+                
+                <!-- Canvas para OCR -->
+                <Canvas x:Name="OcrOverlayCanvas"
+                        IsHitTestVisible="True"
+                        Visibility="Collapsed"/>
+                
+                <!-- Canvas para handles de manipulación -->
+                <Canvas x:Name="HandlesCanvas"
+                        IsHitTestVisible="True"
+                        Visibility="Collapsed"/>
+
+                <!-- Canvas para recorte -->
+                <Canvas x:Name="CropOverlayCanvas"
+                        IsHitTestVisible="True"
+                        Visibility="Collapsed">
+                    
+                    <!-- Overlay oscuro fuera del área de recorte (4 rectángulos) -->
+                    <Rectangle x:Name="CropDimTop"
+                               Fill="#AA000000"
+                               IsHitTestVisible="False"/>
+                    <Rectangle x:Name="CropDimBottom"
+                               Fill="#AA000000"
+                               IsHitTestVisible="False"/>
+                    <Rectangle x:Name="CropDimLeft"
+                               Fill="#AA000000"
+                               IsHitTestVisible="False"/>
+                    <Rectangle x:Name="CropDimRight"
+                               Fill="#AA000000"
+                               IsHitTestVisible="False"/>
+                    
+                    <!-- Área de selección de recorte (transparente, solo borde) -->
+                    <Rectangle x:Name="CropSelectionRect"
+                               Stroke="White"
+                               StrokeThickness="1.5"
+                               Fill="Transparent"
+                               PointerPressed="CropSelection_PointerPressed"
+                               PointerMoved="CropSelection_PointerMoved"
+                               PointerReleased="CropSelection_PointerReleased"
+                               PointerCaptureLost="CropSelection_PointerCaptureLost"/>
+                    
+                    <!-- Handles de esquinas (forma L) -->
+                    <!-- NW: esquina interior en (4,4), brazos de 4px de grosor -->
+                    <Path x:Name="CropHandleNW" Width="20" Height="20" Fill="White"
+                          Tag="NW"
+                          Data="M 0 0 L 20 0 L 20 4 L 4 4 L 4 20 L 0 20 Z"
+                          PointerEntered="CropHandle_PointerEntered"
+                          PointerExited="CropHandle_PointerExited"
+                          PointerPressed="CropHandle_PointerPressed"
+                          PointerMoved="CropHandle_PointerMoved"
+                          PointerReleased="CropHandle_PointerReleased"
+                          PointerCaptureLost="CropHandle_PointerCaptureLost"/>
+                    <!-- NE: esquina interior en (16,4), brazos de 4px de grosor -->
+                    <Path x:Name="CropHandleNE" Width="20" Height="20" Fill="White"
+                          Tag="NE"
+                          Data="M 0 0 L 20 0 L 20 20 L 16 20 L 16 4 L 0 4 Z"
+                          PointerEntered="CropHandle_PointerEntered"
+                          PointerExited="CropHandle_PointerExited"
+                          PointerPressed="CropHandle_PointerPressed"
+                          PointerMoved="CropHandle_PointerMoved"
+                          PointerReleased="CropHandle_PointerReleased"
+                          PointerCaptureLost="CropHandle_PointerCaptureLost"/>
+                    <!-- SE: esquina interior en (16,16), brazos de 4px de grosor -->
+                    <Path x:Name="CropHandleSE" Width="20" Height="20" Fill="White"
+                          Tag="SE"
+                          Data="M 20 0 L 20 20 L 0 20 L 0 16 L 16 16 L 16 0 Z"
+                          PointerEntered="CropHandle_PointerEntered"
+                          PointerExited="CropHandle_PointerExited"
+                          PointerPressed="CropHandle_PointerPressed"
+                          PointerMoved="CropHandle_PointerMoved"
+                          PointerReleased="CropHandle_PointerReleased"
+                          PointerCaptureLost="CropHandle_PointerCaptureLost"/>
+                    <!-- SW: esquina interior en (4,16), brazos de 4px de grosor -->
+                    <Path x:Name="CropHandleSW" Width="20" Height="20" Fill="White"
+                          Tag="SW"
+                          Data="M 0 0 L 4 0 L 4 16 L 20 16 L 20 20 L 0 20 Z"
+                          PointerEntered="CropHandle_PointerEntered"
+                          PointerExited="CropHandle_PointerExited"
+                          PointerPressed="CropHandle_PointerPressed"
+                          PointerMoved="CropHandle_PointerMoved"
+                          PointerReleased="CropHandle_PointerReleased"
+                          PointerCaptureLost="CropHandle_PointerCaptureLost"/>
+                    
+                    <!-- Handles de bordes (píldoras) -->
+                    <Rectangle x:Name="CropHandleN" Width="32" Height="8" Fill="White" RadiusX="4" RadiusY="4"
+                               Tag="N"
+                               PointerEntered="CropHandle_PointerEntered"
+                               PointerExited="CropHandle_PointerExited"
+                               PointerPressed="CropHandle_PointerPressed"
+                               PointerMoved="CropHandle_PointerMoved"
+                               PointerReleased="CropHandle_PointerReleased"
+                               PointerCaptureLost="CropHandle_PointerCaptureLost"/>
+                    <Rectangle x:Name="CropHandleE" Width="8" Height="32" Fill="White" RadiusX="4" RadiusY="4"
+                               Tag="E"
+                               PointerEntered="CropHandle_PointerEntered"
+                               PointerExited="CropHandle_PointerExited"
+                               PointerPressed="CropHandle_PointerPressed"
+                               PointerMoved="CropHandle_PointerMoved"
+                               PointerReleased="CropHandle_PointerReleased"
+                               PointerCaptureLost="CropHandle_PointerCaptureLost"/>
+                    <Rectangle x:Name="CropHandleS" Width="32" Height="8" Fill="White" RadiusX="4" RadiusY="4"
+                               Tag="S"
+                               PointerEntered="CropHandle_PointerEntered"
+                               PointerExited="CropHandle_PointerExited"
+                               PointerPressed="CropHandle_PointerPressed"
+                               PointerMoved="CropHandle_PointerMoved"
+                               PointerReleased="CropHandle_PointerReleased"
+                               PointerCaptureLost="CropHandle_PointerCaptureLost"/>
+                    <Rectangle x:Name="CropHandleW" Width="8" Height="32" Fill="White" RadiusX="4" RadiusY="4"
+                               Tag="W"
+                               PointerEntered="CropHandle_PointerEntered"
+                               PointerExited="CropHandle_PointerExited"
+                               PointerPressed="CropHandle_PointerPressed"
+                               PointerMoved="CropHandle_PointerMoved"
+                               PointerReleased="CropHandle_PointerReleased"
+                               PointerCaptureLost="CropHandle_PointerCaptureLost"/>
+                </Canvas>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- Canvas para los toolbars flotantes (siempre encima de la imagen) -->
+        <!-- Background="{x:Null}" permite que los clics fuera de los toolbars pasen a la imagen debajo -->
+        <Canvas x:Name="FloatingToolbarsCanvas"
+                IsHitTestVisible="True"
+                Background="{x:Null}">
+            
+            <!-- Menú Flotante de Formas -->
+            <Border x:Name="FloatingShapesToolbar"
+                    Visibility="Collapsed"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="8"
+                    Translation="0,0,32"
+                    Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                    IsHitTestVisible="True"
+                    Canvas.Top="16"
+                    PointerPressed="FloatingMenu_PointerPressed">
+                <Border.Shadow>
+                    <ThemeShadow/>
+                </Border.Shadow>
+                <shapes:ShapesToolbarControl x:Name="FloatingShapesToolbarContent"
+                                               ShapeSelected="FloatingShapesToolbar_ShapeSelected"
+                                               FillButtonClicked="FloatingShapesToolbar_FillButtonClicked"
+                                               StyleButtonClicked="FloatingShapesToolbar_StyleButtonClicked"/>
+            </Border>
+
+            <!-- Menú Flotante de Estilo (Trazo) -->
+            <Border x:Name="FloatingStyleToolbar"
+                    Visibility="Collapsed"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="14"
+                    Translation="0,0,32"
+                    Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                    IsHitTestVisible="True"
+                    Canvas.Top="72"
+                    PointerPressed="FloatingMenu_PointerPressed">
+                <Border.Shadow>
+                    <ThemeShadow/>
+                </Border.Shadow>
+                <shapes:StyleToolbarControl x:Name="FloatingStyleToolbarContent"
+                                              ColorChanged="FloatingStyleToolbar_ColorChanged"
+                                              OpacityChanged="FloatingStyleToolbar_OpacityChanged"
+                                              ThicknessChanged="FloatingStyleToolbar_ThicknessChanged"/>
+            </Border>
+
+            <!-- Menú Flotante de Fill (Relleno) -->
+            <Border x:Name="FloatingFillToolbar"
+                    Visibility="Collapsed"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="14"
+                    Translation="0,0,32"
+                    Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                    IsHitTestVisible="True"
+                    Canvas.Top="72"
+                    PointerPressed="FloatingMenu_PointerPressed">
+                <Border.Shadow>
+                    <ThemeShadow/>
+                </Border.Shadow>
+                <shapes:FillToolbarControl x:Name="FloatingFillToolbarContent"
+                                             ColorChanged="FloatingFillToolbar_ColorChanged"
+                                             OpacityChanged="FloatingFillToolbar_OpacityChanged"/>
+            </Border>
+
+            <!-- Menú Flotante de Bolígrafo -->
+            <Border x:Name="FloatingPenToolbar"
+                    Visibility="Collapsed"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="14"
+                    Translation="0,0,32"
+                    Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                    IsHitTestVisible="True"
+                    Canvas.Top="16"
+                    PointerPressed="FloatingMenu_PointerPressed">
+                <Border.Shadow>
+                    <ThemeShadow/>
+                </Border.Shadow>
+                <drawing:PenToolbarControl x:Name="FloatingPenToolbarContent"
+                                            ColorChanged="FloatingPenToolbar_ColorChanged"
+                                            ThicknessChanged="FloatingPenToolbar_ThicknessChanged"/>
+            </Border>
+
+            <!-- Menú Flotante de Resaltador -->
+            <Border x:Name="FloatingHighlighterToolbar"
+                    Visibility="Collapsed"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="14"
+                    Translation="0,0,32"
+                    Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                    IsHitTestVisible="True"
+                    Canvas.Top="16"
+                    PointerPressed="FloatingMenu_PointerPressed">
+                <Border.Shadow>
+                    <ThemeShadow/>
+                </Border.Shadow>
+                <drawing:HighlighterToolbarControl x:Name="FloatingHighlighterToolbarContent"
+                                                    ColorChanged="FloatingHighlighterToolbar_ColorChanged"
+                                                    ThicknessChanged="FloatingHighlighterToolbar_ThicknessChanged"/>
+            </Border>
+
+            <!-- Menú Flotante de Texto -->
+            <Border x:Name="FloatingTextToolbar"
+                    Visibility="Collapsed"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="8"
+                    Translation="0,0,32"
+                    Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                    IsHitTestVisible="True"
+                    Canvas.Top="16"
+                    PointerPressed="FloatingMenu_PointerPressed">
+                <Border.Shadow>
+                    <ThemeShadow/>
+                </Border.Shadow>
+                <StackPanel Spacing="8">
+                    <!-- Vista Previa del Texto -->
+                    <Border x:Name="TextPreviewBorder"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="12,8"
+                            MinHeight="50"
+                            MaxHeight="100"
+                            HorizontalAlignment="Stretch">
+                        <Border x:Name="TextPreviewHighlightBorder"
+                                Background="Transparent"
+                                CornerRadius="2"
+                                Padding="4,2"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                            <TextBlock x:Name="TextPreviewBlock"
+                                       Text="Texto de ejemplo"
+                                       FontFamily="Segoe UI"
+                                       FontSize="16"
+                                       Foreground="White"
+                                       TextWrapping="NoWrap"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxWidth="500"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                    </Border>
+                    
+                    <!-- Controles de formato -->
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <!-- Selector de Fuente -->
+                        <ComboBox x:Name="FontFamilyComboBox"
+                                  Width="140"
+                                  Height="36"
+                                  VerticalAlignment="Center"
+                                  SelectionChanged="FontFamilyComboBox_SelectionChanged"
+                                  ToolTipService.ToolTip="Fuente">
+                            <ComboBoxItem Content="Segoe UI" IsSelected="True"/>
+                            <ComboBoxItem Content="Arial"/>
+                            <ComboBoxItem Content="Times New Roman"/>
+                            <ComboBoxItem Content="Calibri"/>
+                            <ComboBoxItem Content="Consolas"/>
+                            <ComboBoxItem Content="Comic Sans MS"/>
+                            <ComboBoxItem Content="Georgia"/>
+                            <ComboBoxItem Content="Verdana"/>
+                            <ComboBoxItem Content="Tahoma"/>
+                        </ComboBox>
+
+                        <!-- Selector de Tamaño (Editable) -->
+                        <ComboBox x:Name="FontSizeComboBox"
+                                  IsEditable="True"
+                                  Width="75"
+                                  Height="36"
+                                  VerticalAlignment="Center"
+                                  Text="16"
+                                  TextSubmitted="FontSizeComboBox_TextSubmitted"
+                                  SelectionChanged="FontSizeComboBox_SelectionChanged"
+                                  ToolTipService.ToolTip="Tamaño de fuente">
+                            <ComboBoxItem Content="8"/>
+                            <ComboBoxItem Content="9"/>
+                            <ComboBoxItem Content="10"/>
+                            <ComboBoxItem Content="11"/>
+                            <ComboBoxItem Content="12"/>
+                            <ComboBoxItem Content="14"/>
+                            <ComboBoxItem Content="16" IsSelected="True"/>
+                            <ComboBoxItem Content="18"/>
+                            <ComboBoxItem Content="20"/>
+                            <ComboBoxItem Content="24"/>
+                            <ComboBoxItem Content="28"/>
+                            <ComboBoxItem Content="32"/>
+                            <ComboBoxItem Content="36"/>
+                            <ComboBoxItem Content="48"/>
+                            <ComboBoxItem Content="56"/>
+                            <ComboBoxItem Content="72"/>
+                        </ComboBox>
+
+                        <Border Width="1" 
+                                Background="{ThemeResource DividerStrokeColorDefaultBrush}"
+                                Margin="4,6"/>
+
+                        <!-- Estilos de texto -->
+                        <ToggleButton x:Name="BoldToggle"
+                                      Click="BoldToggle_Click"
+                                      Width="36" Height="36"
+                                      Padding="0"
+                                      CornerRadius="4"
+                                      ToolTipService.ToolTip="Negrita (Ctrl+B)">
+                            <FontIcon Glyph="&#xE8DD;" FontSize="14"/>
+                        </ToggleButton>
+                        <ToggleButton x:Name="ItalicToggle"
+                                      Click="ItalicToggle_Click"
+                                      Width="36" Height="36"
+                                      Padding="0"
+                                      CornerRadius="4"
+                                      ToolTipService.ToolTip="Cursiva (Ctrl+I)">
+                            <FontIcon Glyph="&#xE8DB;" FontSize="14"/>
+                        </ToggleButton>
+                        <ToggleButton x:Name="UnderlineToggle"
+                                      Click="UnderlineToggle_Click"
+                                      Width="36" Height="36"
+                                      Padding="0"
+                                      CornerRadius="4"
+                                      ToolTipService.ToolTip="Subrayado (Ctrl+U)">
+                            <FontIcon Glyph="&#xE8DC;" FontSize="14"/>
+                        </ToggleButton>
+                        <ToggleButton x:Name="StrikethroughToggle"
+                                      Click="StrikethroughToggle_Click"
+                                      Width="36" Height="36"
+                                      Padding="0"
+                                      CornerRadius="4"
+                                      ToolTipService.ToolTip="Tachado">
+                            <FontIcon Glyph="&#xEDE0;" FontSize="14"/>
+                        </ToggleButton>
+
+                        <Border Width="1" 
+                                Background="{ThemeResource DividerStrokeColorDefaultBrush}"
+                                Margin="4,6"/>
+
+                        <!-- Botón Color de Texto -->
+                        <Button x:Name="TextColorButton"
+                                Click="TextColorButton_Click"
+                                Width="36" Height="36"
+                                Padding="0"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                CornerRadius="4"
+                                ToolTipService.ToolTip="Color del texto">
+                            <Grid>
+                                <FontIcon Glyph="&#xE8D3;" FontSize="14" Margin="0,-2,0,0"/>
+                                <Border x:Name="TextColorIndicator"
+                                        Height="4"
+                                        Width="16"
+                                        Background="White"
+                                        CornerRadius="1"
+                                        VerticalAlignment="Bottom"
+                                        Margin="0,0,0,4"/>
+                            </Grid>
+                        </Button>
+
+                        <!-- Botón Color de Resaltado -->
+                        <Button x:Name="TextHighlightButton"
+                                Click="TextHighlightButton_Click"
+                                Width="36" Height="36"
+                                Padding="0"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                CornerRadius="4"
+                                ToolTipService.ToolTip="Color de resaltado">
+                            <Grid>
+                                <FontIcon Glyph="&#xE7E6;" FontSize="14" Margin="0,-2,0,0"/>
+                                <Border x:Name="TextHighlightIndicator"
+                                        Height="4"
+                                        Width="16"
+                                        Background="Transparent"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="1"
+                                        VerticalAlignment="Bottom"
+                                        Margin="0,0,0,4"/>
+                            </Grid>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Menú Flotante de Color de Texto -->
+            <Border x:Name="FloatingTextColorToolbar"
+                    Visibility="Collapsed"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="14"
+                    Translation="0,0,32"
+                    Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                    IsHitTestVisible="True"
+                    Canvas.Top="130"
+                    PointerPressed="FloatingMenu_PointerPressed">
+                <Border.Shadow>
+                    <ThemeShadow/>
+                </Border.Shadow>
+                <common:ColorPaletteControl x:Name="TextColorPalette"
+                                              PaletteType="Text"
+                                              Title="Color del texto"
+                                              ColorSelected="TextColorPalette_ColorSelected"/>
+            </Border>
+
+            <!-- Menú Flotante de Color de Resaltado de Texto -->
+            <Border x:Name="FloatingTextHighlightToolbar"
+                    Visibility="Collapsed"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="14"
+                    Translation="0,0,32"
+                    Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                    IsHitTestVisible="True"
+                    Canvas.Top="130"
+                    PointerPressed="FloatingMenu_PointerPressed">
+                <Border.Shadow>
+                    <ThemeShadow/>
+                </Border.Shadow>
+                <common:ColorPaletteControl x:Name="TextBackgroundColorPalette"
+                                              PaletteType="TextHighlight"
+                                              Title="Color de resaltado"
+                                              ColorSelected="TextBackgroundColorPalette_ColorSelected"/>
+            </Border>
+
+            <!-- Menú Flotante de Emojis -->
+            <Border x:Name="FloatingEmojiToolbar"
+                    Visibility="Collapsed"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="8"
+                    Translation="0,0,32"
+                    Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                    IsHitTestVisible="True"
+                    Canvas.Top="16"
+                    PointerPressed="FloatingMenu_PointerPressed">
+                <Border.Shadow>
+                    <ThemeShadow/>
+                </Border.Shadow>
+                <emoji:EmojiToolbarControl x:Name="FloatingEmojiToolbarContent"
+                                           EmojiSelected="FloatingEmojiToolbar_EmojiSelected"/>
+            </Border>
+        </Canvas>
+    </Grid>
+</UserControl>
+
+

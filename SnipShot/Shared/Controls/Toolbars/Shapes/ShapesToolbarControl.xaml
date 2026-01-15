@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="SnipShot.Shared.Controls.Toolbars.Shapes.ShapesToolbarControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SnipShot.Shared.Controls.Toolbars.Shapes"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <StackPanel Orientation="Horizontal" Spacing="4">
+            <!-- Botón Square -->
+            <Button x:Name="SquareButton"
+                    Click="SquareButton_Click"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="6"
+                    CornerRadius="4"
+                    Width="36"
+                    Height="36"
+                    ToolTipService.ToolTip="Cuadrado">
+                <FontIcon Glyph="&#xE739;" FontSize="16"/>
+            </Button>
+            
+            <!-- Botón Circle -->
+            <Button x:Name="CircleButton"
+                    Click="CircleButton_Click"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="6"
+                    CornerRadius="4"
+                    Width="36"
+                    Height="36"
+                    ToolTipService.ToolTip="Círculo">
+                <FontIcon Glyph="&#xEA3A;" FontSize="16"/>
+            </Button>
+            
+            <!-- Botón Line -->
+            <Button x:Name="LineButton"
+                    Click="LineButton_Click"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="6"
+                    CornerRadius="4"
+                    Width="36"
+                    Height="36"
+                    ToolTipService.ToolTip="Línea">
+                <FontIcon Glyph="&#xE738;" FontSize="16"/>
+            </Button>
+            
+            <!-- Botón Arrow -->
+            <Button x:Name="ArrowButton"
+                    Click="ArrowButton_Click"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="6"
+                    CornerRadius="4"
+                    Width="36"
+                    Height="36"
+                    ToolTipService.ToolTip="Flecha">
+                <FontIcon Glyph="&#xEA4F;" FontSize="16"/>
+            </Button>
+
+            <!-- Botón Star -->
+            <Button x:Name="StarButton"
+                    Click="StarButton_Click"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="6"
+                    CornerRadius="4"
+                    Width="36"
+                    Height="36"
+                    ToolTipService.ToolTip="Estrella">
+                <FontIcon Glyph="&#xE734;" FontSize="16"/>
+            </Button>
+
+            <Border Width="1"
+                    Background="{ThemeResource DividerStrokeColorDefaultBrush}"
+                    Margin="2,0"/>
+
+            <!-- Botón Fill -->
+            <Button x:Name="FillButton"
+                    Click="FillButton_Click"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="6"
+                    CornerRadius="4"
+                    IsEnabled="False"
+                    ToolTipService.ToolTip="Relleno">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <FontIcon Glyph="&#xE771;" FontSize="14"/>
+                    <TextBlock Text="Relleno" FontSize="12"/>
+                    <FontIcon x:Name="FillArrowIcon" Glyph="&#xE70D;" FontSize="10" Margin="2,0,0,0"/>
+                </StackPanel>
+            </Button>
+
+            <!-- Botón Trazo -->
+            <Button x:Name="StyleButton"
+                    Click="StyleButton_Click"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="6"
+                    CornerRadius="4"
+                    ToolTipService.ToolTip="Opciones de trazo">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <FontIcon Glyph="&#xE76F;" FontSize="14"/>
+                    <TextBlock Text="Trazo" FontSize="12"/>
+                    <FontIcon x:Name="StyleArrowIcon" Glyph="&#xE70D;" FontSize="10" Margin="2,0,0,0"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+</UserControl>

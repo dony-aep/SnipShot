@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="SnipShot.Features.Capture.Windows.ShadeOverlayWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SnipShot.Features.Capture.Windows"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid x:Name="RootGrid" Background="Transparent">
+        
+        <!-- Capa 1: Imagen de fondo (captura de pantalla) -->
+        <Image x:Name="BackgroundImage"
+               Stretch="None"
+               HorizontalAlignment="Left"
+               VerticalAlignment="Top"
+               IsHitTestVisible="False"/>
+        
+        <!-- Capa 2: Shade semi-transparente (opcional, algunos modos lo ocultan) -->
+        <!-- Comienza oculto para evitar parpadeo; se muestra cuando el fondo está listo -->
+        <Grid x:Name="ShadeLayer"
+              Background="#40000000"
+              IsHitTestVisible="False"
+              Opacity="0"/>
+        
+        <!-- Capa 3: Contenedor del modo activo -->
+        <!-- El modo activo se carga aquí dinámicamente -->
+        <ContentPresenter x:Name="ModeContainer"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"/>
+        
+    </Grid>
+</Window>

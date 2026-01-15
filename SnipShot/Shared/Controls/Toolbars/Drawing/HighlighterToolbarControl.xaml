@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="SnipShot.Shared.Controls.Toolbars.Drawing.HighlighterToolbarControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SnipShot.Shared.Controls.Toolbars.Drawing"
+    xmlns:common="using:SnipShot.Shared.Controls.Common"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <StackPanel Orientation="Vertical" Spacing="14" MinWidth="220">
+        <!-- Sección de color del resaltador -->
+        <StackPanel Spacing="10">
+            <TextBlock Text="Color del resaltador" FontWeight="SemiBold"/>
+            <Grid x:Name="HighlighterColorGrid"
+                  HorizontalAlignment="Center"
+                  ColumnSpacing="6"
+                  RowSpacing="6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Highlighter colors (semi-transparent) -->
+                <Button Grid.Column="0" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                    Click="HighlighterColorButton_Click" Tag="#80FFFF00" ToolTipService.ToolTip="Amarillo">
+                    <Border Width="34" Height="34" CornerRadius="8" Background="#80FFFF00"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+                </Button>
+                <Button Grid.Column="1" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                    Click="HighlighterColorButton_Click" Tag="#8000FF00" ToolTipService.ToolTip="Verde">
+                    <Border Width="34" Height="34" CornerRadius="8" Background="#8000FF00"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+                </Button>
+                <Button Grid.Column="2" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                    Click="HighlighterColorButton_Click" Tag="#8000FFFF" ToolTipService.ToolTip="Cyan">
+                    <Border Width="34" Height="34" CornerRadius="8" Background="#8000FFFF"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+                </Button>
+                <Button Grid.Column="3" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                    Click="HighlighterColorButton_Click" Tag="#80FF00FF" ToolTipService.ToolTip="Magenta">
+                    <Border Width="34" Height="34" CornerRadius="8" Background="#80FF00FF"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+                </Button>
+                <Button Grid.Column="4" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"
+                    Click="HighlighterColorButton_Click" Tag="#80FFA500" ToolTipService.ToolTip="Naranja">
+                    <Border Width="34" Height="34" CornerRadius="8" Background="#80FFA500"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+                </Button>
+            </Grid>
+        </StackPanel>
+
+        <!-- Sección de tamaño del resaltador -->
+        <common:ThicknessSliderControl x:Name="ThicknessControl" 
+                                      Title="Tamaño"
+                                      Minimum="8"
+                                      Maximum="32"
+                                      Thickness="16"
+                                      ThicknessChanged="ThicknessControl_ThicknessChanged"/>
+    </StackPanel>
+</UserControl>

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "SnipShot (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "SnipShot (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
