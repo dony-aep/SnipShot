@@ -21,6 +21,8 @@ using Windows.Graphics.Imaging;
 using Windows.Graphics;
 using Windows.System;
 using Windows.ApplicationModel.DataTransfer;
+using Microsoft.Windows.AppNotifications;
+using Microsoft.Windows.AppNotifications.Builder;
 using System.Runtime.InteropServices;
 using SnipShot.Helpers.Capture;
 using SnipShot.Helpers.UI;
@@ -44,9 +46,18 @@ namespace SnipShot
     /// </summary>
     public sealed partial class MainWindow : Window
     {
+        private enum CaptureInvocationSource
+        {
+            MainButton,
+            Hotkey,
+            SystemTray
+        }
+
         // Constantes para tamaño mínimo de ventana
         private const int MIN_WINDOW_WIDTH = 600;
         private const int MIN_WINDOW_HEIGHT = 300;
+        private const string CaptureModeWindow = "Ventana";
+        private const string CaptureModeFullScreen = "Pantalla Completa";
 
         // P/Invoke para establecer tamaño mínimo de ventana
         private const int WM_GETMINMAXINFO = 0x0024;
@@ -103,6 +114,9 @@ namespace SnipShot
         private NativeSystemTrayService? _systemTrayService;
         private bool _isReallyClosing;
         private bool _minimizeToTray = true;
+        private string? _currentDisplayedFilePath;
+        private readonly bool _launchHiddenOnStartup;
+        private bool _startupHideApplied;
 
         // Layout responsivo
         private const double COMPACT_WIDTH_THRESHOLD = 1100;
@@ -122,8 +136,9 @@ namespace SnipShot
             }
         }
 
-        public MainWindow()
+        public MainWindow(bool launchHiddenOnStartup = false)
         {
+            _launchHiddenOnStartup = launchHiddenOnStartup;
             InitializeComponent();
 
             ImageEditor.SetToolbarAnchors(EditShapesButton, null, null, EditTextButton, EditEmojiButton);
@@ -167,7 +182,6 @@ namespace SnipShot
             _autoSaveManager.AutoSaveFolderPathChanged += (s, path) => SettingsView.SetAutoSaveFolderPath(path);
             
             // Suscribirse a eventos de CaptureOrchestrator
-            _captureOrchestrator.CaptureCompleted += async (s, bitmap) => await ShowCapturePreview(bitmap, true);
             _captureOrchestrator.ApplyThemeToOverlay += (s, overlay) => ApplyThemeToOverlay(overlay);
             _captureOrchestrator.CaptureCancelled += (s, e) => 
             {
@@ -225,8 +239,20 @@ namespace SnipShot
 
             // Configurar evento de cierre para minimizar al tray
             this.Closed += MainWindow_Closed;
+            this.Activated += MainWindow_Activated;
 
             WindowCaptureTeachingTip.Target = CaptureOptionsButton;
+        }
+
+        private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
+        {
+            if (!_launchHiddenOnStartup || _startupHideApplied)
+            {
+                return;
+            }
+
+            _startupHideApplied = true;
+            HideToTray();
         }
 
         private void SetupMinimumWindowSize()
@@ -370,7 +396,7 @@ namespace SnipShot
         private async void NewCaptureButton_Click(object sender, RoutedEventArgs e)
         {
             // Ejecuta la captura según el modo actualmente seleccionado
-            await CaptureScreenAsync(_captureModeManager!.CurrentMode);
+            await CaptureScreenAsync(_captureModeManager!.CurrentMode, CaptureInvocationSource.MainButton);
         }
 
         private async void OpenImageButton_Click(object sender, RoutedEventArgs e)
@@ -416,6 +442,8 @@ namespace SnipShot
                 var success = await _imagePreviewManager!.LoadImageFromFileAsync(file);
                 if (success)
                 {
+                    _currentDisplayedFilePath = file.Path;
+
                     // Cerrar el flyout de OCR si está abierto (nueva imagen invalida el OCR anterior)
                     CloseOcrFlyout();
                     
@@ -496,13 +524,18 @@ namespace SnipShot
             _uiStateManager?.HideWindowCaptureTip();
         }
 
-        private async Task CaptureScreenAsync(string captureMode)
+        private async Task CaptureScreenAsync(
+            string captureMode,
+            CaptureInvocationSource invocationSource = CaptureInvocationSource.MainButton)
         {
+            SoftwareBitmap? capturedBitmap = null;
+
             var appWindowHandle = WinRT.Interop.WindowNative.GetWindowHandle(this);
 
-            if (captureMode == "Ventana")
+            if (captureMode == CaptureModeWindow)
             {
-                await CaptureWindowAsync(appWindowHandle);
+                capturedBitmap = await CaptureWindowAsync(appWindowHandle);
+                await ProcessCaptureResultAsync(capturedBitmap, invocationSource);
                 return;
             }
 
@@ -512,46 +545,50 @@ namespace SnipShot
             {
                 switch (captureMode)
                 {
-                    case "Pantalla Completa":
-                        await CaptureFullScreenAsync();
+                    case CaptureModeFullScreen:
+                        capturedBitmap = await CaptureFullScreenAsync();
                         break;
                     case "Rectangular":
-                        await CaptureRectangularAsync();
+                        capturedBitmap = await CaptureRectangularAsync();
                         break;
                     case "Forma Libre":
-                        await CaptureFreeFormAsync();
+                        capturedBitmap = await CaptureFreeFormAsync();
                         break;
                     default:
                         throw new NotImplementedException($"Modo '{captureMode}' no implementado.");
                 }
             }, _captureDelayManager!.DelaySeconds);
+
+            await ProcessCaptureResultAsync(capturedBitmap, invocationSource);
         }
 
-        private async Task CaptureFullScreenAsync()
+        private async Task<SoftwareBitmap?> CaptureFullScreenAsync()
         {
             try
             {
-                await _captureOrchestrator!.CaptureFullScreenAsync();
+                return await _captureOrchestrator!.CaptureFullScreenAsync();
             }
             catch (Exception ex)
             {
                 await DialogService.ShowErrorAsync(ex, "Error", "No se pudo capturar la pantalla:");
+                return null;
             }
         }
 
-        private async Task CaptureRectangularAsync()
+        private async Task<SoftwareBitmap?> CaptureRectangularAsync()
         {
             try
             {
-                await _captureOrchestrator!.CaptureRectangularAsync();
+                return await _captureOrchestrator!.CaptureRectangularAsync();
             }
             catch (Exception ex)
             {
                 await DialogService.ShowErrorAsync(ex, "Error", "No se pudo capturar el área rectangular:");
+                return null;
             }
         }
 
-        private async Task CaptureWindowAsync(IntPtr appWindowHandle)
+        private async Task<SoftwareBitmap?> CaptureWindowAsync(IntPtr appWindowHandle)
         {
             // Enumerar ventanas ANTES de ocultar la aplicación para incluirla en la lista
             var availableWindows = WindowEnumerationHelper.GetCaptureableWindows(appWindowHandle, includeOwnWindow: true);
@@ -559,28 +596,43 @@ namespace SnipShot
             if (availableWindows.Count == 0)
             {
                 ShowWindowCaptureTip("No hay ventanas disponibles para capturar.");
-                return;
+                return null;
             }
 
             HideWindowCaptureTip();
 
+            SoftwareBitmap? resultBitmap = null;
+
             await _windowVisibilityManager!.ExecuteWithHiddenWindowAsync(async () =>
             {
                 // Pasar las ventanas pre-enumeradas al orchestrator
-                await _captureOrchestrator!.CaptureWindowAsync(availableWindows);
+                resultBitmap = await _captureOrchestrator!.CaptureWindowAsync(availableWindows);
             }, _captureDelayManager!.DelaySeconds);
+
+            return resultBitmap;
         }
 
-        private async Task CaptureFreeFormAsync()
+        private async Task<SoftwareBitmap?> CaptureFreeFormAsync()
         {
             try
             {
-                await _captureOrchestrator!.CaptureFreeFormAsync();
+                return await _captureOrchestrator!.CaptureFreeFormAsync();
             }
             catch (Exception ex)
             {
                 await DialogService.ShowErrorAsync(ex, "Error", "No se pudo capturar en forma libre:");
+                return null;
             }
+        }
+
+        private async Task ProcessCaptureResultAsync(SoftwareBitmap? capturedBitmap, CaptureInvocationSource invocationSource)
+        {
+            if (capturedBitmap == null)
+            {
+                return;
+            }
+
+            await HandleCaptureCompletedAsync(capturedBitmap, invocationSource);
         }
 
 
@@ -590,6 +642,9 @@ namespace SnipShot
             var success = await _imagePreviewManager!.ShowCaptureAsync(screenshot);
             if (success)
             {
+                // La captura mostrada reemplaza cualquier archivo previamente asociado.
+                _currentDisplayedFilePath = null;
+
                 // Cerrar el flyout de OCR si está abierto (nueva captura invalida el OCR anterior)
                 CloseOcrFlyout();
                 
@@ -607,10 +662,59 @@ namespace SnipShot
                 ApplyDefaultZoom();
                 _uiStateManager?.ShowZoomControls();
 
+                (bool saved, string? filePath) autoSaveResult = (false, null);
                 if (autoSaveEligible)
                 {
-                    await _autoSaveManager!.AutoSaveIfEnabledAsync(screenshot);
+                    autoSaveResult = await _autoSaveManager!.AutoSaveIfEnabledAsync(screenshot);
+                    if (autoSaveResult.saved)
+                    {
+                        _currentDisplayedFilePath = autoSaveResult.filePath;
+                    }
                 }
+            }
+        }
+
+        private async Task HandleCaptureCompletedAsync(SoftwareBitmap bitmap, CaptureInvocationSource invocationSource)
+        {
+            if (invocationSource == CaptureInvocationSource.Hotkey)
+            {
+                await HandleHotkeyCaptureAsync(bitmap);
+                return;
+            }
+
+            await ShowCapturePreview(bitmap, true);
+        }
+
+        private async Task HandleHotkeyCaptureAsync(SoftwareBitmap bitmap)
+        {
+            try
+            {
+                await ClipboardHelper.CopyImageToClipboardAsync(bitmap);
+                ShowHotkeyCaptureCopiedNotification();
+            }
+            catch (Exception ex)
+            {
+                await DialogService.ShowErrorAsync(ex, "Error", "No se pudo copiar al portapapeles:");
+            }
+            finally
+            {
+                bitmap.Dispose();
+            }
+        }
+
+        private void ShowHotkeyCaptureCopiedNotification()
+        {
+            try
+            {
+                var builder = new AppNotificationBuilder()
+                    .AddText("Captura copiada al portapapeles")
+                    .AddText("Usa Ctrl+V para pegarla");
+
+                AppNotificationManager.Default.Show(builder.BuildNotification());
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Unable to show capture notification: {ex.Message}");
             }
         }
 
@@ -811,7 +915,7 @@ namespace SnipShot
         private async void HotkeyService_HotkeyPressed(object? sender, HotkeyType hotkeyType)
         {
             // Ejecutar la captura según el modo actual
-            await CaptureScreenAsync(_captureModeManager!.CurrentMode);
+            await CaptureScreenAsync(_captureModeManager!.CurrentMode, CaptureInvocationSource.Hotkey);
         }
 
         private async void HotkeyService_RegistrationError(object? sender, string errorMessage)
@@ -870,7 +974,7 @@ namespace SnipShot
         private async void SystemTrayService_CaptureRequested(object? sender, EventArgs e)
         {
             // Ejecutar captura desde el tray con el modo actualmente configurado
-            await CaptureScreenAsync(_captureModeManager!.CurrentMode);
+            await CaptureScreenAsync(_captureModeManager!.CurrentMode, CaptureInvocationSource.SystemTray);
         }
 
         private void SystemTrayService_ExitRequested(object? sender, EventArgs e)
@@ -999,6 +1103,8 @@ namespace SnipShot
                 }
             }
 
+            await DeleteCurrentDisplayedFileAsync();
+
             _imagePreviewManager?.Clear();
             _zoomManager?.Reset();
             _uiStateManager?.HideZoomControls();
@@ -1010,6 +1116,36 @@ namespace SnipShot
             ImageEditor.Clear();
             ImageEditor.Visibility = Visibility.Collapsed;
             UpdateOcrUiState();
+        }
+
+        private async Task DeleteCurrentDisplayedFileAsync()
+        {
+            if (string.IsNullOrWhiteSpace(_currentDisplayedFilePath))
+            {
+                return;
+            }
+
+            var filePath = _currentDisplayedFilePath;
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                return;
+            }
+
+            try
+            {
+                if (!File.Exists(filePath))
+                {
+                    _currentDisplayedFilePath = null;
+                    return;
+                }
+
+                File.Delete(filePath);
+                _currentDisplayedFilePath = null;
+            }
+            catch (Exception ex)
+            {
+                await DialogService.ShowErrorAsync(ex, "Error", "No se pudo eliminar el archivo en disco:");
+            }
         }
 
         private void ApplyTheme(string theme)
@@ -1196,15 +1332,31 @@ namespace SnipShot
             SettingsView.SetMinimizeToTrayPreference(_minimizeToTray);
 
             // Cargar preferencia de iniciar con Windows
+            var hasSavedStartupPreference = _settingsService.HasStartWithWindowsPreference();
             var startWithWindows = _settingsService.GetStartWithWindowsEnabled();
-            
-            // Verificar el estado real en el sistema
-            var actualState = await StartupService.IsStartupEnabledAsync();
-            if (actualState != startWithWindows)
+
+            if (!hasSavedStartupPreference)
             {
-                // Sincronizar con el estado real
-                _settingsService.SaveStartWithWindowsEnabled(actualState);
-                startWithWindows = actualState;
+                // Primera ejecución: aplicar el valor por defecto en el sistema.
+                var defaultApplied = await StartupService.SetStartupEnabledAsync(startWithWindows);
+                if (!defaultApplied)
+                {
+                    // Si no se pudo aplicar (política, usuario o entorno de desarrollo),
+                    // reflejar el estado real para evitar desincronización en la UI.
+                    startWithWindows = await StartupService.IsStartupEnabledAsync();
+                }
+
+                _settingsService.SaveStartWithWindowsEnabled(startWithWindows);
+            }
+            else
+            {
+                // En ejecuciones posteriores, sincronizar con el estado real del sistema.
+                var actualState = await StartupService.IsStartupEnabledAsync();
+                if (actualState != startWithWindows)
+                {
+                    _settingsService.SaveStartWithWindowsEnabled(actualState);
+                    startWithWindows = actualState;
+                }
             }
             
             SettingsView.SetStartWithWindowsPreference(startWithWindows);

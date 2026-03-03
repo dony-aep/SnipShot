@@ -52,18 +52,18 @@ namespace SnipShot.Helpers.UI
         /// Guarda automáticamente una captura si el guardado automático está habilitado
         /// </summary>
         /// <param name="screenshot">El bitmap de la captura a guardar</param>
-        /// <returns>True si se guardó exitosamente, false en caso contrario</returns>
-        public async Task<bool> AutoSaveIfEnabledAsync(SoftwareBitmap screenshot)
+        /// <returns>Tupla indicando si se guardó y la ruta del archivo guardado</returns>
+        public async Task<(bool saved, string? filePath)> AutoSaveIfEnabledAsync(SoftwareBitmap screenshot)
         {
             if (!_autoSaveEnabled)
-                return false;
+            return (false, null);
 
             try
             {
                 var targetFolder = await GetAutoSaveFolderAsync();
                 if (targetFolder == null)
                 {
-                    return false;
+                    return (false, null);
                 }
 
                 string fileName = $"SnipShot_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png";
@@ -95,12 +95,12 @@ namespace SnipShot.Helpers.UI
                     bitmapForEncoding.Dispose();
                 }
 
-                return true;
+                return (true, file.Path);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Auto-save failed: {ex.Message}");
-                return false;
+                return (false, null);
             }
         }
 

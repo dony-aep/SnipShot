@@ -23,11 +23,13 @@ Una aplicación de captura de pantalla moderna para Windows desarrollada con Win
 ### Funciones adicionales
 - **Extracción de texto (OCR)** - Extrae texto de las imágenes capturadas
 - **Búsqueda de imagen** - Busca imágenes similares en Google o Bing
-- **Guardado automático** - Guarda automáticamente las capturas en tu carpeta preferida
+- **Actualizaciones** - Verifica nuevas versiones desde Configuración y abre la descarga en GitHub Releases
+- **Acerca de dinámico** - La sección Acerca de en Configuración muestra versión y año actualizados automáticamente
+- **Guardado automático** - Guarda automáticamente las capturas en tu carpeta preferida (activado por defecto)
 - **Delay configurable** - Programa capturas con retraso de 3, 5 o 10 segundos
-- **Atajos de teclado** - Ctrl+Shift+S y Print Screen configurables
+- **Atajos de teclado** - Ctrl+Shift+S y Print Screen configurables con copia al portapapeles y notificación nativa
 - **Bandeja del sistema** - Minimiza a la bandeja para acceso rápido
-- **Inicio con Windows** - Opción para iniciar automáticamente
+- **Inicio con Windows** - Opción activada por defecto; al arrancar por inicio de sesión se ejecuta en segundo plano
 - **Borde personalizable** - Añade bordes con color y grosor configurable
 - **Temas** - Soporte para tema claro, oscuro y automático del sistema
 - **Zoom** - Acerca y aleja las capturas para edición precisa
@@ -92,4 +94,4 @@ Este proyecto está bajo la Licencia MIT. Consulta el archivo [LICENSE](LICENSE)
 
 ## Autor
 
-**dony.**
+**dony-aep**

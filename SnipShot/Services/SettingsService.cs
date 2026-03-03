@@ -27,7 +27,7 @@ namespace SnipShot.Services
 
         // Valores predeterminados
         private const string DEFAULT_THEME = "Default";
-        private const bool DEFAULT_AUTO_SAVE_ENABLED = false;
+        private const bool DEFAULT_AUTO_SAVE_ENABLED = true;
         private const bool DEFAULT_BORDER_ENABLED = false;
         private const string DEFAULT_BORDER_COLOR = "#FF000000";
         private const double DEFAULT_BORDER_THICKNESS = 1.0;
@@ -36,7 +36,7 @@ namespace SnipShot.Services
         private const bool DEFAULT_PRINT_SCREEN_HOTKEY_ENABLED = false;
         private const bool DEFAULT_CTRL_SHIFT_S_HOTKEY_ENABLED = true;
         private const bool DEFAULT_MINIMIZE_TO_TRAY = true;
-        private const bool DEFAULT_START_WITH_WINDOWS = false;
+        private const bool DEFAULT_START_WITH_WINDOWS = true;
 
         public SettingsService()
         {
@@ -184,6 +184,14 @@ namespace SnipShot.Services
         public void SaveAutoSaveEnabled(bool enabled)
         {
             SaveSetting(AUTO_SAVE_ENABLED_KEY, enabled);
+        }
+
+        /// <summary>
+        /// Indica si el usuario ya tiene guardada una preferencia de guardado automático.
+        /// </summary>
+        public bool HasAutoSavePreference()
+        {
+            return ContainsSetting(AUTO_SAVE_ENABLED_KEY);
         }
 
         /// <summary>
@@ -398,6 +406,14 @@ namespace SnipShot.Services
         public void SaveStartWithWindowsEnabled(bool enabled)
         {
             SaveSetting(START_WITH_WINDOWS_KEY, enabled);
+        }
+
+        /// <summary>
+        /// Indica si el usuario ya tiene guardada una preferencia de inicio con Windows.
+        /// </summary>
+        public bool HasStartWithWindowsPreference()
+        {
+            return ContainsSetting(START_WITH_WINDOWS_KEY);
         }
 
         #endregion

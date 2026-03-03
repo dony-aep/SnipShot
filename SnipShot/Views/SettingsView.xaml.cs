@@ -128,6 +128,7 @@ namespace SnipShot.Views
         private void SettingsView_Loaded(object sender, RoutedEventArgs e)
         {
             SyncAllToggles();
+            UpdateAboutSection();
         }
 
         /// <summary>
@@ -137,6 +138,7 @@ namespace SnipShot.Views
         public void SyncAllToggles()
         {
             SetAutoSaveFolderPath(_autoSaveFolderPathDisplay);
+            UpdateAboutSection();
             
             // Aplicar valores guardados a los toggles de hotkeys
             if (PrintScreenHotkeyToggle != null)
@@ -156,6 +158,22 @@ namespace SnipShot.Views
             if (StartWithWindowsToggle != null)
             {
                 ControlStateManager.SetToggleSilently(StartWithWindowsToggle, _startWithWindowsEnabled, StartWithWindowsToggle_Toggled);
+            }
+        }
+
+        /// <summary>
+        /// Actualiza de forma dinamica los datos de la seccion Acerca de.
+        /// </summary>
+        private void UpdateAboutSection()
+        {
+            if (VersionText != null)
+            {
+                VersionText.Text = $"SnipShot v{UpdateService.CurrentVersion}";
+            }
+
+            if (CopyrightText != null)
+            {
+                CopyrightText.Text = $"© {DateTime.Now.Year} SnipShot. Todos los derechos reservados.";
             }
         }
 

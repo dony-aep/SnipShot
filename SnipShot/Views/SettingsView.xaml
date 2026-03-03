@@ -463,13 +463,14 @@
                                   Text="SnipShot 1.0.0.0"
                                   FontSize="14"/>
                         
-                        <TextBlock Text="© 2026 SnipShot. Todos los derechos reservados."
+                        <TextBlock x:Name="CopyrightText"
+                                  Text="© 2026 SnipShot. Todos los derechos reservados."
                                   FontSize="12"
                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                   Margin="0,0,0,8"/>
                         
                         <HyperlinkButton Content="Sitio web" 
-                                       NavigateUri="https://snipshot.com"/>
+                                       NavigateUri="https://snipshotw3.vercel.app/"/>
                     </StackPanel>
 
                     <!-- Actualizaciones -->

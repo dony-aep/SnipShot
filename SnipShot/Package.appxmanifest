@@ -12,13 +12,13 @@
   <Identity
     Name="f2fd9cec-af14-44d0-b01c-89bef529d4ba"
     Publisher="CN=doney"
-    Version="1.0.0.0" />
+    Version="1.1.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="f2fd9cec-af14-44d0-b01c-89bef529d4ba" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
     <DisplayName>SnipShot</DisplayName>
-    <PublisherDisplayName>doney</PublisherDisplayName>
+    <PublisherDisplayName>dony-aep</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
@@ -47,7 +47,7 @@
         <uap5:Extension Category="windows.startupTask">
           <uap5:StartupTask 
             TaskId="SnipShotStartupTask" 
-            Enabled="false" 
+            Enabled="true" 
             DisplayName="SnipShot" />
         </uap5:Extension>
       </Extensions>

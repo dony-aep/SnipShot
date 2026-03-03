@@ -158,7 +158,7 @@ namespace SnipShot.Services
             overlay.SetBorderSettings(_borderEnabled, _borderColorHex, _borderThickness);
             ApplyThemeToOverlay?.Invoke(this, overlay);
 
-            overlay.CaptureCompleted += (sender, args) =>
+            overlay.CaptureCompleted += async (sender, args) =>
             {
                 if (args.CapturedBitmap != null)
                 {
@@ -166,7 +166,37 @@ namespace SnipShot.Services
                     overlay.CloseOverlay();
                     CaptureCompleted?.Invoke(this, resultBitmap);
                     completionSource.TrySetResult(true);
+                    return;
                 }
+
+                if (args.SelectedRegion.HasValue)
+                {
+                    overlay.CloseOverlay();
+                    await Task.Delay(75);
+
+                    var region = args.SelectedRegion.Value;
+                    var screenshot = await _screenCaptureService.CaptureRegionAsync(
+                        region.X,
+                        region.Y,
+                        region.Width,
+                        region.Height);
+
+                    if (screenshot != null)
+                    {
+                        var bitmapWithBorder = await ApplyBorderIfEnabledAsync(screenshot);
+                        resultBitmap = bitmapWithBorder;
+                        CaptureCompleted?.Invoke(this, bitmapWithBorder);
+                        completionSource.TrySetResult(true);
+                    }
+                    else
+                    {
+                        completionSource.TrySetResult(false);
+                    }
+
+                    return;
+                }
+
+                completionSource.TrySetResult(false);
             };
 
             overlay.CaptureCancelled += (sender, args) =>
@@ -393,11 +423,36 @@ namespace SnipShot.Services
                     var bitmapWithBorder = await ApplyBorderIfEnabledAsync(args.CapturedBitmap);
                     CaptureCompleted?.Invoke(this, bitmapWithBorder);
                     onCompleted(bitmapWithBorder);
+                    return;
                 }
-                else
+
+                if (args.SelectedRegion.HasValue)
                 {
-                    onCancelled();
+                    overlay.CloseOverlay();
+                    await Task.Delay(75);
+
+                    var region = args.SelectedRegion.Value;
+                    var screenshot = await _screenCaptureService.CaptureRegionAsync(
+                        region.X,
+                        region.Y,
+                        region.Width,
+                        region.Height);
+
+                    if (screenshot != null)
+                    {
+                        var bitmapWithBorder = await ApplyBorderIfEnabledAsync(screenshot);
+                        CaptureCompleted?.Invoke(this, bitmapWithBorder);
+                        onCompleted(bitmapWithBorder);
+                    }
+                    else
+                    {
+                        onCancelled();
+                    }
+
+                    return;
                 }
+
+                onCancelled();
             };
 
             overlay.CaptureCancelled += (sender, args) =>

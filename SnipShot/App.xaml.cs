@@ -18,6 +18,7 @@ using Windows.ApplicationModel.Activation;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 using Windows.Storage;
+using Microsoft.Windows.AppLifecycle;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -71,8 +72,33 @@ namespace SnipShot
                 return;
             }
 
-            _window = new MainWindow();
+            var launchHiddenOnStartup = IsStartupTaskLaunch(args);
+
+            _window = new MainWindow(launchHiddenOnStartup);
             _window.Activate();
+        }
+
+        /// <summary>
+        /// Determina si el arranque actual proviene de StartupTask (inicio de sesión de Windows).
+        /// </summary>
+        private static bool IsStartupTaskLaunch(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+        {
+            try
+            {
+                var activationArgs = Microsoft.Windows.AppLifecycle.AppInstance.GetCurrent().GetActivatedEventArgs();
+                if (activationArgs.Kind == ExtendedActivationKind.StartupTask)
+                {
+                    return true;
+                }
+            }
+            catch
+            {
+                // Ignorar y usar fallback por argumentos.
+            }
+
+            // Fallback para entornos donde el tipo de activación no esté disponible.
+            return !string.IsNullOrWhiteSpace(args.Arguments)
+                && args.Arguments.Contains("startup", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
