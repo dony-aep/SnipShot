@@ -11,7 +11,7 @@
     <StackPanel Orientation="Vertical" Spacing="8">
         <!-- Category Buttons -->
         <StackPanel x:Name="CategoryPanel" Orientation="Horizontal" Spacing="2">
-            <Button x:Name="SmileysCategory"
+            <Button x:Name="SmileysCategory" AutomationProperties.AutomationId="SmileysCategory" AutomationProperties.Name="Caritas"
                     Click="CategoryButton_Click"
                     Tag="smileys"
                     Background="Transparent"
@@ -22,7 +22,7 @@
                     FontSize="18"
                     Content="😀"
                     ToolTipService.ToolTip="Caritas"/>
-            <Button x:Name="GesturesCategory"
+            <Button x:Name="GesturesCategory" AutomationProperties.AutomationId="GesturesCategory" AutomationProperties.Name="Gestos"
                     Click="CategoryButton_Click"
                     Tag="gestures"
                     Background="Transparent"
@@ -33,7 +33,7 @@
                     FontSize="18"
                     Content="👍"
                     ToolTipService.ToolTip="Gestos"/>
-            <Button x:Name="SymbolsCategory"
+            <Button x:Name="SymbolsCategory" AutomationProperties.AutomationId="SymbolsCategory" AutomationProperties.Name="Símbolos"
                     Click="CategoryButton_Click"
                     Tag="symbols"
                     Background="Transparent"
@@ -44,7 +44,7 @@
                     FontSize="18"
                     Content="❤️"
                     ToolTipService.ToolTip="Símbolos"/>
-            <Button x:Name="CelebrationCategory"
+            <Button x:Name="CelebrationCategory" AutomationProperties.AutomationId="CelebrationCategory" AutomationProperties.Name="Celebración"
                     Click="CategoryButton_Click"
                     Tag="celebration"
                     Background="Transparent"
@@ -55,7 +55,7 @@
                     FontSize="18"
                     Content="🎉"
                     ToolTipService.ToolTip="Celebración"/>
-            <Button x:Name="NatureCategory"
+            <Button x:Name="NatureCategory" AutomationProperties.AutomationId="NatureCategory" AutomationProperties.Name="Naturaleza"
                     Click="CategoryButton_Click"
                     Tag="nature"
                     Background="Transparent"
@@ -66,7 +66,7 @@
                     FontSize="18"
                     Content="🌸"
                     ToolTipService.ToolTip="Naturaleza"/>
-            <Button x:Name="ArrowsCategory"
+            <Button x:Name="ArrowsCategory" AutomationProperties.AutomationId="ArrowsCategory" AutomationProperties.Name="Flechas"
                     Click="CategoryButton_Click"
                     Tag="arrows"
                     Background="Transparent"

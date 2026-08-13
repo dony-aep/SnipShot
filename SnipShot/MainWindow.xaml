@@ -17,7 +17,13 @@
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
-    <Grid KeyboardAcceleratorPlacementMode="Hidden">
+    <!-- El KeyDown va en el Grid raíz y no en el panel del editor porque burbujea desde el
+         elemento con foco: colgado más abajo, no se ejecutaba salvo que el foco estuviera
+         justo dentro de ese panel. Aquí llega siempre. Es el único camino para Ctrl con el
+         +/- de la fila superior: el enum VirtualKey no tiene miembros OEM, así que esas
+         teclas no se pueden declarar como KeyboardAccelerator en XAML. -->
+    <Grid KeyboardAcceleratorPlacementMode="Hidden"
+          KeyDown="MainGrid_KeyDown">
         <!-- Title Bar personalizada -->
         <Grid x:Name="AppTitleBar" 
               Height="48" 
@@ -92,7 +98,7 @@
                        Orientation="Horizontal" 
                        Spacing="10"
                        VerticalAlignment="Center">
-                <Button x:Name="NewCaptureButton"
+                <Button x:Name="NewCaptureButton" AutomationProperties.AutomationId="NewCaptureButton"
                        Click="NewCaptureButton_Click"
                        Style="{StaticResource AccentButtonStyle}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -101,49 +107,73 @@
                     </StackPanel>
                 </Button>
                 
-                <Button x:Name="CaptureOptionsButton"
+                <!-- Solo icono: el modo activo se distingue por el glifo, y el tooltip lo nombra -->
+                <Button x:Name="CaptureOptionsButton" AutomationProperties.AutomationId="CaptureOptionsButton" AutomationProperties.Name="Captura Rectangular"
                        ToolTipService.ToolTip="Captura Rectangular"
+                       Click="CaptureOptionsButton_Click"
                        Background="Transparent"
                        BorderBrush="Transparent">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <FontIcon x:Name="CaptureOptionIcon" Glyph="&#xF407;" FontSize="16"/>
                         <FontIcon Glyph="&#xE70D;" FontSize="12"/>
                     </StackPanel>
-                    <Button.Flyout>
-                        <MenuFlyout Placement="BottomEdgeAlignedRight">
-                            <MenuFlyoutItem Text="Captura Rectangular" 
-                                          Click="RectangularCapture_Click">
-                                <MenuFlyoutItem.Icon>
-                                    <FontIcon Glyph="&#xF407;"/>
-                                </MenuFlyoutItem.Icon>
-                            </MenuFlyoutItem>
-                            
-                            <MenuFlyoutItem Text="Captura de Ventana" 
-                                          Click="WindowCapture_Click">
-                                <MenuFlyoutItem.Icon>
-                                    <FontIcon Glyph="&#xF7ED;"/>
-                                </MenuFlyoutItem.Icon>
-                            </MenuFlyoutItem>
-                            
-                            <MenuFlyoutItem Text="Pantalla Completa" 
-                                          Click="FullScreenCapture_Click">
-                                <MenuFlyoutItem.Icon>
-                                    <FontIcon Glyph="&#xE9A6;"/>
-                                </MenuFlyoutItem.Icon>
-                            </MenuFlyoutItem>
-                            
-                            <MenuFlyoutItem Text="Forma Libre" 
-                                          Click="FreeFormCapture_Click">
-                                <MenuFlyoutItem.Icon>
-                                    <FontIcon Glyph="&#xF408;"/>
-                                </MenuFlyoutItem.Icon>
-                            </MenuFlyoutItem>
-                        </MenuFlyout>
-                    </Button.Flyout>
+                    <!-- AttachedFlyout y no Button.Flyout: así no se abre solo y lo abrimos
+                         con ShowAt para superponerlo al botón, como hace un ComboBox -->
+                    <FlyoutBase.AttachedFlyout>
+                        <!-- Lista de selección, no menú: el item activo se marca con el
+                             resaltado y la barra de acento nativos del ListView -->
+                        <Flyout Placement="BottomEdgeAlignedLeft">
+                            <!-- BasedOn es obligatorio: sin él se pierden CornerRadius,
+                                 Background, BorderBrush y BorderThickness del estilo por
+                                 defecto, y el flyout sale con esquinas cuadradas -->
+                            <Flyout.FlyoutPresenterStyle>
+                                <Style TargetType="FlyoutPresenter" BasedOn="{StaticResource DefaultFlyoutPresenterStyle}">
+                                    <Setter Property="Padding" Value="4"/>
+                                    <Setter Property="MinWidth" Value="0"/>
+                                </Style>
+                            </Flyout.FlyoutPresenterStyle>
+                            <ListView x:Name="CaptureModeList" AutomationProperties.AutomationId="CaptureModeList"
+                                      SelectedIndex="0"
+                                      IsItemClickEnabled="True"
+                                      ItemClick="CaptureModeList_ItemClick"
+                                      SelectionChanged="CaptureModeList_SelectionChanged">
+                                <ListViewItem Tag="Rectangular">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <FontIcon Glyph="&#xF407;" FontSize="16"/>
+                                        <TextBlock Text="Rectangular"/>
+                                    </StackPanel>
+                                </ListViewItem>
+
+                                <ListViewItem Tag="Ventana">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <FontIcon Glyph="&#xF7ED;" FontSize="16"/>
+                                        <TextBlock Text="Ventana"/>
+                                    </StackPanel>
+                                </ListViewItem>
+
+                                <ListViewItem Tag="Pantalla Completa">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <FontIcon Glyph="&#xE9A6;" FontSize="16"/>
+                                        <TextBlock Text="Pantalla Completa"/>
+                                    </StackPanel>
+                                </ListViewItem>
+
+                                <ListViewItem Tag="Forma Libre">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <FontIcon Glyph="&#xF408;" FontSize="16"/>
+                                        <TextBlock Text="Forma Libre"/>
+                                    </StackPanel>
+                                </ListViewItem>
+                            </ListView>
+                        </Flyout>
+                    </FlyoutBase.AttachedFlyout>
                 </Button>
 
-                <Button x:Name="DelayOptionsButton"
+                <!-- Reloj + número: Segoe Fluent Icons no tiene glifos de temporizador
+                     numerados, así que el icono solo no distinguiría los 4 delays -->
+                <Button x:Name="DelayOptionsButton" AutomationProperties.AutomationId="DelayOptionsButton" AutomationProperties.Name="Sin delay"
                        ToolTipService.ToolTip="Sin delay"
+                       Click="DelayOptionsButton_Click"
                        Background="Transparent"
                        BorderBrush="Transparent">
                     <StackPanel Orientation="Horizontal" Spacing="6">
@@ -151,37 +181,52 @@
                         <TextBlock x:Name="DelayOptionText" Text="0s"/>
                         <FontIcon Glyph="&#xE70D;" FontSize="12"/>
                     </StackPanel>
-                    <Button.Flyout>
-                        <MenuFlyout Placement="BottomEdgeAlignedRight">
-                            <MenuFlyoutItem Text="Sin delay" 
-                                          Click="NoDelay_Click">
-                                <MenuFlyoutItem.Icon>
-                                    <FontIcon Glyph="&#xE916;"/>
-                                </MenuFlyoutItem.Icon>
-                            </MenuFlyoutItem>
-                            
-                            <MenuFlyoutItem Text="3 segundos" 
-                                          Click="Delay3_Click">
-                                <MenuFlyoutItem.Icon>
-                                    <FontIcon Glyph="&#xE916;"/>
-                                </MenuFlyoutItem.Icon>
-                            </MenuFlyoutItem>
-                            
-                            <MenuFlyoutItem Text="5 segundos" 
-                                          Click="Delay5_Click">
-                                <MenuFlyoutItem.Icon>
-                                    <FontIcon Glyph="&#xE916;"/>
-                                </MenuFlyoutItem.Icon>
-                            </MenuFlyoutItem>
-                            
-                            <MenuFlyoutItem Text="10 segundos" 
-                                          Click="Delay10_Click">
-                                <MenuFlyoutItem.Icon>
-                                    <FontIcon Glyph="&#xE916;"/>
-                                </MenuFlyoutItem.Icon>
-                            </MenuFlyoutItem>
-                        </MenuFlyout>
-                    </Button.Flyout>
+                    <FlyoutBase.AttachedFlyout>
+                        <Flyout Placement="BottomEdgeAlignedLeft">
+                            <!-- BasedOn es obligatorio: sin él se pierden CornerRadius,
+                                 Background, BorderBrush y BorderThickness del estilo por
+                                 defecto, y el flyout sale con esquinas cuadradas -->
+                            <Flyout.FlyoutPresenterStyle>
+                                <Style TargetType="FlyoutPresenter" BasedOn="{StaticResource DefaultFlyoutPresenterStyle}">
+                                    <Setter Property="Padding" Value="4"/>
+                                    <Setter Property="MinWidth" Value="0"/>
+                                </Style>
+                            </Flyout.FlyoutPresenterStyle>
+                            <ListView x:Name="DelayList" AutomationProperties.AutomationId="DelayList"
+                                      SelectedIndex="0"
+                                      IsItemClickEnabled="True"
+                                      ItemClick="DelayList_ItemClick"
+                                      SelectionChanged="DelayList_SelectionChanged">
+                                <ListViewItem Tag="0">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <FontIcon Glyph="&#xE916;" FontSize="16"/>
+                                        <TextBlock Text="Sin delay"/>
+                                    </StackPanel>
+                                </ListViewItem>
+
+                                <ListViewItem Tag="3">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <FontIcon Glyph="&#xE916;" FontSize="16"/>
+                                        <TextBlock Text="3 segundos"/>
+                                    </StackPanel>
+                                </ListViewItem>
+
+                                <ListViewItem Tag="5">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <FontIcon Glyph="&#xE916;" FontSize="16"/>
+                                        <TextBlock Text="5 segundos"/>
+                                    </StackPanel>
+                                </ListViewItem>
+
+                                <ListViewItem Tag="10">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <FontIcon Glyph="&#xE916;" FontSize="16"/>
+                                        <TextBlock Text="10 segundos"/>
+                                    </StackPanel>
+                                </ListViewItem>
+                            </ListView>
+                        </Flyout>
+                    </FlyoutBase.AttachedFlyout>
                 </Button>
             </StackPanel>
 
@@ -195,7 +240,7 @@
                         Visibility="Collapsed">
                 
                 <!-- Botón Formas -->
-                <Button x:Name="EditShapesButton"
+                <Button x:Name="EditShapesButton" AutomationProperties.AutomationId="EditShapesButton" AutomationProperties.Name="Formas"
                         Click="EditShapesButton_Click"
                         Background="Transparent"
                         BorderThickness="0"
@@ -206,7 +251,7 @@
                 </Button>
                 
                 <!-- Botón Bolígrafo -->
-                <Button x:Name="EditPenButton"
+                <Button x:Name="EditPenButton" AutomationProperties.AutomationId="EditPenButton" AutomationProperties.Name="Bolígrafo"
                         Click="EditPenButton_Click"
                         RightTapped="EditPenButton_RightTapped"
                         Background="Transparent"
@@ -225,7 +270,7 @@
                 </Button>
                 
                 <!-- Botón Resaltador -->
-                <Button x:Name="EditHighlighterButton"
+                <Button x:Name="EditHighlighterButton" AutomationProperties.AutomationId="EditHighlighterButton" AutomationProperties.Name="Resaltador"
                         Click="EditHighlighterButton_Click"
                         RightTapped="EditHighlighterButton_RightTapped"
                         Background="Transparent"
@@ -244,7 +289,7 @@
                 </Button>
                 
                 <!-- Boton Borrador -->
-                <Button x:Name="EditEraserButton"
+                <Button x:Name="EditEraserButton" AutomationProperties.AutomationId="EditEraserButton" AutomationProperties.Name="Borrador"
                         Click="EditEraserButton_Click"
                         RightTapped="EditEraserButton_RightTapped"
                         Background="Transparent"
@@ -265,7 +310,7 @@
                     </Button.Flyout>
                 </Button>
                 <!-- Botón Emoji -->
-                <Button x:Name="EditEmojiButton"
+                <Button x:Name="EditEmojiButton" AutomationProperties.AutomationId="EditEmojiButton" AutomationProperties.Name="Emoji"
                         Click="EditEmojiButton_Click"
                         Background="Transparent"
                         BorderThickness="0"
@@ -276,7 +321,7 @@
                 </Button>
                 
                 <!-- Botón Texto -->
-                <Button x:Name="EditTextButton"
+                <Button x:Name="EditTextButton" AutomationProperties.AutomationId="EditTextButton" AutomationProperties.Name="Añadir texto"
                         Click="EditTextButton_Click"
                         Background="Transparent"
                         BorderThickness="0"
@@ -294,7 +339,7 @@
                         Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
                 
                 <!-- Boton Recortar -->
-                <Button x:Name="EditCropButton"
+                <Button x:Name="EditCropButton" AutomationProperties.AutomationId="EditCropButton" AutomationProperties.Name="Recortar"
                         Click="EditCropButton_Click"
                         Background="Transparent"
                         BorderThickness="0"
@@ -305,7 +350,7 @@
                 </Button>
 
                 <!-- Boton Extraer texto -->
-                <Button x:Name="EditOcrButton"
+                <Button x:Name="EditOcrButton" AutomationProperties.AutomationId="EditOcrButton" AutomationProperties.Name="Extraer texto"
                         Click="EditOcrButton_Click"
                         Background="Transparent"
                         BorderThickness="0"
@@ -326,7 +371,7 @@
                                 Opened="EditOcrFlyout_Opened"
                                 Closed="EditOcrFlyout_Closed">
                             <StackPanel Spacing="0" MinWidth="180" Margin="-11">
-                                <Button x:Name="EditOcrCopyAllButton"
+                                <Button x:Name="EditOcrCopyAllButton" AutomationProperties.AutomationId="EditOcrCopyAllButton"
                                         Click="EditOcrCopyAll_Click"
                                         IsEnabled="False"
                                         HorizontalAlignment="Stretch"
@@ -345,7 +390,7 @@
                 </Button>
 
                 <!-- Boton Aplicar recorte -->
-                <Button x:Name="CropApplyButton"
+                <Button x:Name="CropApplyButton" AutomationProperties.AutomationId="CropApplyButton" AutomationProperties.Name="Aplicar recorte"
                         Click="CropApplyButton_Click"
                         Background="Transparent"
                         BorderThickness="0"
@@ -360,7 +405,7 @@
                 </Button>
 
                 <!-- Boton Cancelar recorte -->
-                <Button x:Name="CropCancelButton"
+                <Button x:Name="CropCancelButton" AutomationProperties.AutomationId="CropCancelButton" AutomationProperties.Name="Cancelar recorte"
                         Click="CropCancelButton_Click"
                         Background="Transparent"
                         BorderThickness="0"
@@ -375,7 +420,7 @@
                 </Button>
                 
                 <!-- Botón Deshacer -->
-                <Button x:Name="EditUndoButton"
+                <Button x:Name="EditUndoButton" AutomationProperties.AutomationId="EditUndoButton" AutomationProperties.Name="Deshacer (Ctrl+Z)"
                         Click="EditUndoButton_Click"
                         Background="Transparent"
                         BorderThickness="0"
@@ -390,7 +435,7 @@
                 </Button>
                 
                 <!-- Botón Rehacer -->
-                <Button x:Name="EditRedoButton"
+                <Button x:Name="EditRedoButton" AutomationProperties.AutomationId="EditRedoButton" AutomationProperties.Name="Rehacer (Ctrl+Y)"
                         Click="EditRedoButton_Click"
                         Background="Transparent"
                         BorderThickness="0"
@@ -411,7 +456,7 @@
                        Spacing="2"
                        VerticalAlignment="Center">
                 <!-- Botones de acción (visibles solo cuando hay captura) -->
-                <Button x:Name="CopyButton"
+                <Button x:Name="CopyButton" AutomationProperties.AutomationId="CopyButton" AutomationProperties.Name="Copiar"
                        Click="CopyButton_Click"
                        Visibility="Collapsed"
                        Background="Transparent"
@@ -420,7 +465,7 @@
                     <FontIcon x:Name="CopyButtonIcon" Glyph="&#xE8C8;" FontSize="16"/>
                 </Button>
                 
-                <Button x:Name="SaveButton"
+                <Button x:Name="SaveButton" AutomationProperties.AutomationId="SaveButton" AutomationProperties.Name="Guardar"
                        Click="SaveButton_Click"
                        Visibility="Collapsed"
                        Background="Transparent"
@@ -429,7 +474,7 @@
                     <FontIcon Glyph="&#xE74E;" FontSize="16"/>
                 </Button>
                 
-                <Button x:Name="ClearButton"
+                <Button x:Name="ClearButton" AutomationProperties.AutomationId="ClearButton" AutomationProperties.Name="Eliminar captura"
                        Click="ClearButton_Click"
                        Visibility="Collapsed"
                        Background="Transparent"
@@ -446,7 +491,7 @@
                         Visibility="Collapsed"
                         Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
 
-                <Button x:Name="MoreButton"
+                <Button x:Name="MoreButton" AutomationProperties.AutomationId="MoreButton" AutomationProperties.Name="Más opciones"
                        ToolTipService.ToolTip="Más opciones">
                     <FontIcon Glyph="&#xE712;" FontSize="16"/>
                     <Button.Flyout>
@@ -502,25 +547,14 @@
                                     </MenuFlyoutItem.KeyboardAccelerators>
                                 </MenuFlyoutItem>
                                 
-                                <MenuFlyoutItem Text="Ajustar a ventana" 
+                                <!-- Ctrl+9 y no Ctrl+Shift+0: Ctrl+Shift es el atajo del sistema
+                                     para cambiar de distribucion de teclado, y Windows lo
+                                     intercepta antes de que llegue a la app -->
+                                <MenuFlyoutItem Text="Ajustar a ventana"
                                               Click="ZoomFit_Click">
                                     <MenuFlyoutItem.KeyboardAccelerators>
-                                        <KeyboardAccelerator Modifiers="Control,Shift" Key="Number0"/>
+                                        <KeyboardAccelerator Modifiers="Control" Key="Number9"/>
                                     </MenuFlyoutItem.KeyboardAccelerators>
-                                </MenuFlyoutItem>
-                                
-                                <MenuFlyoutSeparator/>
-                                
-                                <MenuFlyoutItem x:Name="ZoomLevelMenuItem">
-                                    <MenuFlyoutItem.Template>
-                                        <ControlTemplate>
-                                            <TextBlock x:Name="ZoomLevelText"
-                                                      Text="100%"
-                                                      FontWeight="SemiBold"
-                                                      HorizontalAlignment="Center"
-                                                      Margin="12,8"/>
-                                        </ControlTemplate>
-                                    </MenuFlyoutItem.Template>
                                 </MenuFlyoutItem>
                             </MenuFlyoutSubItem>
                             
@@ -543,7 +577,10 @@
                 VerticalAlignment="Bottom"/>
 
         <!-- Área central para vista previa y edición -->
-        <Grid Grid.Row="1" Padding="20,10" KeyDown="MainGrid_KeyDown"
+        <!-- Sin Padding: el area de la imagen aprovecha todo el contenedor. El espacio
+             alrededor lo aportan los propios controles cuando hace falta (por ejemplo,
+             el margen de ImageContainer en modo recorte). -->
+        <Grid Grid.Row="1"
               KeyboardAcceleratorPlacementMode="Hidden">
             <Grid.KeyboardAccelerators>
                 <KeyboardAccelerator Key="Escape" Invoked="MainGrid_EscapeInvoked"/>

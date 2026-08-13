@@ -6,6 +6,7 @@ using System;
 using Windows.UI;
 using SnipShot.Helpers.UI;
 using SnipShot.Helpers.Utils;
+using SnipShot.Models;
 using SnipShot.Services;
 
 // Alias para evitar conflictos entre Windows.UI.Color y System.Drawing.Color
@@ -168,7 +169,7 @@ namespace SnipShot.Views
         {
             if (VersionText != null)
             {
-                VersionText.Text = $"SnipShot v{UpdateService.CurrentVersion}";
+                VersionText.Text = $"SnipShot v{UpdateService.CurrentVersion}{Constants.BUILD_SUFFIX}";
             }
 
             if (CopyrightText != null)
@@ -506,9 +507,9 @@ namespace SnipShot.Views
             CtrlShiftSHotkeyChanged?.Invoke(this, newValue);
         }
 
-        private void OpenWindowsKeyboardSettings_Click(object sender, RoutedEventArgs e)
+        private async void OpenWindowsKeyboardSettings_Click(object sender, RoutedEventArgs e)
         {
-            HotkeyService.OpenWindowsKeyboardSettings();
+            await HotkeyService.OpenWindowsKeyboardSettingsAsync();
         }
 
         #endregion

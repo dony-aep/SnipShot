@@ -35,6 +35,8 @@ using SnipShot.Features.Capture.Modes.Rectangular;
 using SnipShot.Features.Capture.Modes.WindowCapture;
 using SnipShot.Services;
 using SnipShot.Features.Editor;
+using Microsoft.UI.Xaml.Automation;
+using static SnipShot.Models.NativeMethods;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -61,37 +63,15 @@ namespace SnipShot
 
         // P/Invoke para establecer tamaño mínimo de ventana
         private const int WM_GETMINMAXINFO = 0x0024;
-        private delegate IntPtr WinProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
-        private WinProc? _newWndProc;
+        private WndProcDelegate? _newWndProc;
         private IntPtr _oldWndProc = IntPtr.Zero;
 
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
 
 
         private const int GWLP_WNDPROC = -4;
 
-        [StructLayout(LayoutKind.Sequential)]
-        private struct POINT
-        {
-            public int X;
-            public int Y;
-        }
 
-        [StructLayout(LayoutKind.Sequential)]
-        private struct MINMAXINFO
-        {
-            public POINT ptReserved;
-            public POINT ptMaxSize;
-            public POINT ptMaxPosition;
-            public POINT ptMinTrackSize;
-            public POINT ptMaxTrackSize;
-        }
 
         // Border settings
         private bool _borderEnabled;
@@ -152,7 +132,7 @@ namespace SnipShot
             // Inicializar servicios
             _settingsService = new SettingsService();
             _screenCaptureService = new ScreenCaptureService();
-            _zoomManager = new ZoomManager(PreviewImage, PreviewScrollViewer, ZoomLevelMenuItem);
+            _zoomManager = new ZoomManager(PreviewImage, PreviewScrollViewer);
             _imagePreviewManager = new ImagePreviewManager(
                 PreviewImage,
                 PreviewScrollViewer,
@@ -195,7 +175,16 @@ namespace SnipShot
             // Configurar Title Bar personalizada
             ExtendsContentIntoTitleBar = true;
             SetTitleBar(AppTitleBar);
-            
+
+            // El icono de la ventana es independiente del logo del manifiesto y de la Title Bar
+            // personalizada: esa solo pinta un Image dentro de la app. Sin esto, Alt+Tab y el
+            // Administrador de tareas muestran el icono por defecto. Misma ruta que usa
+            // NativeSystemTrayService, para que los dos iconos no se desincronicen.
+            this.AppWindow.SetIcon(System.IO.Path.Combine(
+                AppContext.BaseDirectory,
+                "Assets",
+                "snipshot.ico"));
+
             // Configurar tamaño mínimo de la ventana
             SetupMinimumWindowSize();
             
@@ -257,7 +246,7 @@ namespace SnipShot
 
         private void SetupMinimumWindowSize()
         {
-            _newWndProc = new WinProc(NewWindowProc);
+            _newWndProc = new WndProcDelegate(NewWindowProc);
             var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
             _oldWndProc = SetWindowLongPtr(hWnd, GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_newWndProc));
         }
@@ -283,9 +272,6 @@ namespace SnipShot
 
             return CallWindowProc(_oldWndProc, hWnd, msg, wParam, lParam);
         }
-
-        [DllImport("user32.dll")]
-        private static extern uint GetDpiForWindow(IntPtr hWnd);
 
         private void CenterWindow()
         {
@@ -474,44 +460,48 @@ namespace SnipShot
             }
         }
 
-        private void RectangularCapture_Click(object sender, RoutedEventArgs e)
+        private void CaptureOptionsButton_Click(object sender, RoutedEventArgs e)
         {
-            _captureModeManager?.SetRectangularMode();
+            FlyoutHelper.ShowOverSelectedItem(CaptureOptionsButton, CaptureModeList);
         }
 
-        private void WindowCapture_Click(object sender, RoutedEventArgs e)
+        private void DelayOptionsButton_Click(object sender, RoutedEventArgs e)
         {
-            _captureModeManager?.SetWindowMode();
+            FlyoutHelper.ShowOverSelectedItem(DelayOptionsButton, DelayList);
         }
 
-        private void FullScreenCapture_Click(object sender, RoutedEventArgs e)
+        // A diferencia de un MenuFlyoutItem, un ListView no cierra el flyout al elegir, y
+        // tampoco dispara SelectionChanged al volver a pulsar el item ya seleccionado.
+        // Por eso el cierre va en ItemClick: si no, elegir la opción actual lo dejaría abierto.
+        private void CaptureModeList_ItemClick(object sender, ItemClickEventArgs e)
         {
-            _captureModeManager?.SetFullScreenMode();
+            FlyoutHelper.HideAttached(CaptureOptionsButton);
         }
 
-        private void FreeFormCapture_Click(object sender, RoutedEventArgs e)
+        private void DelayList_ItemClick(object sender, ItemClickEventArgs e)
         {
-            _captureModeManager?.SetFreeFormMode();
+            FlyoutHelper.HideAttached(DelayOptionsButton);
         }
 
-        private void NoDelay_Click(object sender, RoutedEventArgs e)
+        // Las dos listas disparan SelectionChanged al aplicar su SelectedIndex del XAML,
+        // antes de que InitializeManagers cree los managers. El ?. cubre ese primer
+        // disparo: los managers ya nacen con el valor del item 0, así que coinciden.
+        private void CaptureModeList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            _captureDelayManager?.SetNoDelay();
+            if (CaptureModeList.SelectedItem is ListViewItem item && item.Tag is string mode)
+            {
+                _captureModeManager?.SetMode(mode);
+            }
         }
 
-        private void Delay3_Click(object sender, RoutedEventArgs e)
+        private void DelayList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            _captureDelayManager?.SetDelay3Seconds();
-        }
-
-        private void Delay5_Click(object sender, RoutedEventArgs e)
-        {
-            _captureDelayManager?.SetDelay5Seconds();
-        }
-
-        private void Delay10_Click(object sender, RoutedEventArgs e)
-        {
-            _captureDelayManager?.SetDelay10Seconds();
+            if (DelayList.SelectedItem is ListViewItem item
+                && item.Tag is string tag
+                && int.TryParse(tag, out int seconds))
+            {
+                _captureDelayManager?.SetDelay(seconds);
+            }
         }
 
         private void ShowWindowCaptureTip(string message)
@@ -725,6 +715,11 @@ namespace SnipShot
             _uiStateManager?.ShowSettingsPanel();
             // Sincronizar toggles cada vez que se abre el panel de configuración
             SettingsView.SyncAllToggles();
+
+            // El conflicto con la Herramienta de Recortes se revisa aquí y no solo al arrancar:
+            // el usuario puede haber cambiado la opción en Ajustes de Windows con la app abierta,
+            // y ese cambio no genera ninguna notificación que podamos escuchar.
+            RefreshSnippingToolWarning();
         }
 
         private void SettingsView_BackRequested(object? sender, EventArgs e)
@@ -764,6 +759,28 @@ namespace SnipShot
         {
             try
             {
+                // Con una imagen abierta que exista en disco, se abre su carpeta con ella ya
+                // seleccionada. Se usa la carpeta del propio archivo y no la de capturas porque
+                // la imagen puede venir de otro sitio, y ItemsToSelect solo funciona si el
+                // elemento está dentro de la carpeta que se lanza.
+                if (!string.IsNullOrWhiteSpace(_currentDisplayedFilePath))
+                {
+                    var file = await GetFileIfExistsAsync(_currentDisplayedFilePath);
+                    if (file != null)
+                    {
+                        var parent = await file.GetParentAsync();
+                        if (parent != null)
+                        {
+                            var options = new FolderLauncherOptions();
+                            options.ItemsToSelect.Add(file);
+                            await Launcher.LaunchFolderAsync(parent, options);
+                            return;
+                        }
+                    }
+                }
+
+                // Sin imagen abierta, o con una captura aún sin guardar que no tiene archivo
+                // que señalar: se abre la carpeta de capturas sin seleccionar nada.
                 var folder = await _autoSaveManager!.GetAutoSaveFolderAsync();
                 if (folder != null)
                 {
@@ -840,7 +857,11 @@ namespace SnipShot
         {
             if (enabled)
             {
-                // Verificar si Snipping Tool tiene el control ANTES de intentar activar
+                // No se comprueba porque el registro del hotkey vaya a fallar: RegisterHotKey
+                // con VK_SNAPSHOT tiene éxito aunque Windows tenga la opción activada, porque
+                // la Herramienta de Recortes captura la tecla con un hook de bajo nivel, no
+                // con RegisterHotKey. Se comprueba para evitar que al pulsarla se disparen las
+                // dos cosas a la vez.
                 if (HotkeyService.IsSnippingToolUsingPrintScreen())
                 {
                     // No permitir activar si Snipping Tool está usando la tecla
@@ -948,9 +969,6 @@ namespace SnipShot
             ShowWindow(hwnd, SW_HIDE);
         }
 
-        [DllImport("user32.dll")]
-        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-        
         private const int SW_HIDE = 0;
         private const int SW_SHOW = 5;
         private const int SW_RESTORE = 9;
@@ -967,9 +985,6 @@ namespace SnipShot
             SetForegroundWindow(hwnd);
             this.Activate();
         }
-
-        [DllImport("user32.dll")]
-        private static extern bool SetForegroundWindow(IntPtr hWnd);
 
         private async void SystemTrayService_CaptureRequested(object? sender, EventArgs e)
         {
@@ -1116,6 +1131,28 @@ namespace SnipShot
             ImageEditor.Clear();
             ImageEditor.Visibility = Visibility.Collapsed;
             UpdateOcrUiState();
+        }
+
+        /// <summary>
+        /// Devuelve el StorageFile de una ruta, o null si ya no existe. El archivo puede
+        /// haberse borrado desde el Explorador después de abrirlo en la app.
+        /// </summary>
+        private static async Task<StorageFile?> GetFileIfExistsAsync(string path)
+        {
+            if (!File.Exists(path))
+            {
+                return null;
+            }
+
+            try
+            {
+                return await StorageFile.GetFileFromPathAsync(path);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"No se pudo obtener el archivo '{path}': {ex.Message}");
+                return null;
+            }
         }
 
         private async Task DeleteCurrentDisplayedFileAsync()
@@ -1271,7 +1308,7 @@ namespace SnipShot
             LoadHotkeyPreferences();
 
             // Cargar preferencias de System Tray
-            LoadSystemTrayPreferences();
+            _ = LoadSystemTrayPreferencesAsync();
 
         }
 
@@ -1287,6 +1324,26 @@ namespace SnipShot
         }
 
         /// <summary>
+        /// Muestra u oculta el aviso de que la Herramienta de Recortes tiene tomada la tecla
+        /// Print Screen, releyendo el estado actual de Windows.
+        /// </summary>
+        /// <remarks>
+        /// Solo se avisa si además el usuario tiene activado el hotkey en la app: si no lo
+        /// usa, el ajuste de Windows no le supone ningún conflicto.
+        /// </remarks>
+        private void RefreshSnippingToolWarning()
+        {
+            if (_settingsService == null)
+            {
+                return;
+            }
+
+            bool snippingToolActive = HotkeyService.IsSnippingToolUsingPrintScreen();
+            SettingsView.SetSnippingToolWarningVisible(
+                snippingToolActive && _settingsService.GetPrintScreenHotkeyEnabled());
+        }
+
+        /// <summary>
         /// Carga y aplica las preferencias de hotkeys guardadas.
         /// </summary>
         private void LoadHotkeyPreferences()
@@ -1296,9 +1353,7 @@ namespace SnipShot
                 return;
             }
 
-            // Verificar si Snipping Tool está usando Print Screen
-            bool snippingToolActive = HotkeyService.IsSnippingToolUsingPrintScreen();
-            SettingsView.SetSnippingToolWarningVisible(snippingToolActive && _settingsService.GetPrintScreenHotkeyEnabled());
+            RefreshSnippingToolWarning();
 
             // Cargar preferencia de Print Screen
             var printScreenEnabled = _settingsService.GetPrintScreenHotkeyEnabled();
@@ -1320,7 +1375,7 @@ namespace SnipShot
         /// <summary>
         /// Carga y aplica las preferencias de System Tray guardadas.
         /// </summary>
-        private async void LoadSystemTrayPreferences()
+        private async Task LoadSystemTrayPreferencesAsync()
         {
             if (_settingsService == null)
             {
@@ -1661,6 +1716,7 @@ namespace SnipShot
             EditOcrButton.IsEnabled = false;
             EditOcrCopyAllButton.IsEnabled = false;
             ToolTipService.SetToolTip(EditOcrButton, "Analizando texto...");
+            AutomationProperties.SetName(EditOcrButton, "Analizando texto...");
             
             var success = await ImageEditor.AnalyzeTextAsync();
             
@@ -1921,6 +1977,7 @@ namespace SnipShot
                     ? "Ocultar texto"
                     : "Extraer texto";
             ToolTipService.SetToolTip(EditOcrButton, tooltip);
+            AutomationProperties.SetName(EditOcrButton, tooltip);
         }
 
         /// <summary>

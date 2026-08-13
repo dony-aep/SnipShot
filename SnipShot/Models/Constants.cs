@@ -36,6 +36,16 @@ namespace SnipShot.Models
         /// </summary>
         public const double MIN_SELECTION_SIZE = 25;
 
+        /// <summary>
+        /// Recorrido mínimo (en píxeles) para considerar que hubo arrastre y no un clic suelto.
+        /// </summary>
+        /// <remarks>
+        /// Es distinto de MIN_SELECTION_SIZE a propósito: aquel es el tamaño mínimo al que se
+        /// puede encoger una selección, y usarlo también para filtrar clics hacía que un
+        /// arrastre pequeño pero deliberado se descartara en silencio.
+        /// </remarks>
+        public const double MIN_DRAG_DISTANCE = 5;
+
         #endregion
 
         #region UI Layout
@@ -64,6 +74,20 @@ namespace SnipShot.Models
         /// Alto estimado del display de coordenadas
         /// </summary>
         public const double COORDINATES_DISPLAY_HEIGHT = 40;
+
+        #endregion
+
+        #region Build Info
+
+        /// <summary>
+        /// Sufijo que identifica la configuración con la que se compiló la app.
+        /// En Release queda vacío, así que el usuario final no ve ningún cambio.
+        /// </summary>
+#if DEBUG
+        public const string BUILD_SUFFIX = " (Debug)";
+#else
+        public const string BUILD_SUFFIX = "";
+#endif
 
         #endregion
     }

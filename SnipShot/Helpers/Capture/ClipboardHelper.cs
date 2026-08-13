@@ -4,6 +4,8 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Windows.Graphics.Imaging;
 using Windows.Storage.Streams;
+using SnipShot.Models;
+using static SnipShot.Models.NativeMethods;
 using WinBuffer = Windows.Storage.Streams.Buffer;
 
 namespace SnipShot.Helpers.Capture
@@ -20,30 +22,6 @@ namespace SnipShot.Helpers.Capture
         private const uint BiRgb = 0;
 
         // P/Invoke para acceso directo al portapapeles de Windows
-  [DllImport("user32.dll", SetLastError = true)]
-     private static extern bool OpenClipboard(IntPtr hWndNewOwner);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool CloseClipboard();
-
-        [DllImport("user32.dll", SetLastError = true)]
-  private static extern bool EmptyClipboard();
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr SetClipboardData(uint uFormat, IntPtr hMem);
-
-    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        private static extern uint RegisterClipboardFormat(string lpszFormat);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr GlobalAlloc(uint uFlags, UIntPtr dwBytes);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern IntPtr GlobalLock(IntPtr hMem);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool GlobalUnlock(IntPtr hMem);
-
         private const uint GMEM_MOVEABLE = 0x0002;
  private const uint CF_DIBV5 = 17;
 

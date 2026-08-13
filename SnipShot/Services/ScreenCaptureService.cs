@@ -4,6 +4,8 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using Windows.Graphics;
 using Windows.Graphics.Imaging;
+using SnipShot.Models;
+using static SnipShot.Models.NativeMethods;
 
 namespace SnipShot.Services
 {
@@ -25,57 +27,10 @@ namespace SnipShot.Services
 
         #region Windows API Imports
 
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetDC(IntPtr hwnd);
-
-        [DllImport("user32.dll")]
-        private static extern int ReleaseDC(IntPtr hwnd, IntPtr hdc);
-
-        [DllImport("gdi32.dll")]
-        private static extern IntPtr CreateCompatibleDC(IntPtr hdc);
-
-        [DllImport("gdi32.dll")]
-        private static extern IntPtr CreateCompatibleBitmap(IntPtr hdc, int nWidth, int nHeight);
-
-        [DllImport("gdi32.dll")]
-        private static extern IntPtr SelectObject(IntPtr hdc, IntPtr hgdiobj);
-
-        [DllImport("gdi32.dll")]
-        private static extern bool BitBlt(IntPtr hdcDest, int nXDest, int nYDest, int nWidth, int nHeight,
-            IntPtr hdcSrc, int nXSrc, int nYSrc, int dwRop);
-
-        [DllImport("gdi32.dll")]
-        private static extern bool DeleteObject(IntPtr hObject);
-
-        [DllImport("gdi32.dll")]
-        private static extern bool DeleteDC(IntPtr hdc);
-
-        [DllImport("gdi32.dll")]
-        private static extern int GetDIBits(IntPtr hdc, IntPtr hbmp, uint uStartScan, uint cScanLines,
-            byte[] lpvBits, ref BITMAPINFO lpbi, uint uUsage);
-
-        [DllImport("user32.dll")]
-        private static extern int GetSystemMetrics(int nIndex);
-
         #endregion
 
         #region Structures
 
-        [StructLayout(LayoutKind.Sequential)]
-        private struct BITMAPINFO
-        {
-            public uint biSize;
-            public int biWidth;
-            public int biHeight;
-            public ushort biPlanes;
-            public ushort biBitCount;
-            public uint biCompression;
-            public uint biSizeImage;
-            public int biXPelsPerMeter;
-            public int biYPelsPerMeter;
-            public uint biClrUsed;
-            public uint biClrImportant;
-        }
 
         #endregion
 
@@ -193,7 +148,7 @@ namespace SnipShot.Services
                 // Configurar BITMAPINFO
                 BITMAPINFO bmpInfo = new BITMAPINFO
                 {
-                    biSize = (uint)Marshal.SizeOf(typeof(BITMAPINFO)),
+                    biSize = Marshal.SizeOf<BITMAPINFO>(),
                     biWidth = width,
                     biHeight = -height, // Top-down (negativo para invertir)
                     biPlanes = 1,

@@ -1,7 +1,10 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Microsoft.Win32;
 using Microsoft.UI.Xaml;
+using SnipShot.Models;
+using static SnipShot.Models.NativeMethods;
 
 namespace SnipShot.Services
 {
@@ -28,12 +31,6 @@ namespace SnipShot.Services
     public class HotkeyService : IDisposable
     {
         #region P/Invoke declarations
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
         // Modificadores de tecla
         private const uint MOD_NONE = 0x0000;
@@ -134,28 +131,36 @@ namespace SnipShot.Services
         }
 
         /// <summary>
-        /// Abre la configuración de accesibilidad de Windows donde se puede desactivar
+        /// Abre la configuración de Windows donde se puede desactivar
         /// la opción de Print Screen para Snipping Tool.
         /// </summary>
-        public static async void OpenWindowsKeyboardSettings()
+        public static async Task OpenWindowsKeyboardSettingsAsync()
         {
-            try
+            // La opción cambió de sitio entre versiones de Windows 11: estaba en
+            // Accesibilidad > Teclado y en 25H2 (build 26200) vive en Bluetooth y
+            // dispositivos > Teclado, sección "Métodos abreviados y teclas de acceso rápido".
+            // Para esa página no hay URI documentada, pero la de la tecla Copilot cae en ella
+            // —verificado en 26200— porque es la fila justo encima del interruptor.
+            // Se prueban en orden: la nueva no existe en las versiones antiguas.
+            string[] candidateUris =
             {
-                // URI para abrir directamente la configuración de Accesibilidad > Teclado
-                var uri = new Uri("ms-settings:easeofaccess-keyboard");
-                await Windows.System.Launcher.LaunchUriAsync(uri);
-            }
-            catch
+                "ms-settings:personalization-textinput-copilot-hardwarekey",
+                "ms-settings:easeofaccess-keyboard",
+                "ms-settings:"
+            };
+
+            foreach (var candidate in candidateUris)
             {
-                // Si falla, intentar abrir la configuración general
                 try
                 {
-                    var uri = new Uri("ms-settings:");
-                    await Windows.System.Launcher.LaunchUriAsync(uri);
+                    if (await Windows.System.Launcher.LaunchUriAsync(new Uri(candidate)))
+                    {
+                        return;
+                    }
                 }
                 catch
                 {
-                    // Ignorar si no se puede abrir
+                    // Se prueba la siguiente de la lista
                 }
             }
         }

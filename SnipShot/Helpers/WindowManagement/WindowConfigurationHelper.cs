@@ -7,6 +7,8 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using Windows.Graphics;
 using WinRT.Interop;
+using SnipShot.Models;
+using static SnipShot.Models.NativeMethods;
 
 namespace SnipShot.Helpers.WindowManagement
 {
@@ -16,21 +18,6 @@ namespace SnipShot.Helpers.WindowManagement
     public static class WindowConfigurationHelper
     {
         #region P/Invoke Declarations
-
-        [DllImport("dwmapi.dll")]
-        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
-
-        [DllImport("user32.dll")]
-        private static extern bool SetLayeredWindowAttributes(IntPtr hwnd, uint crKey, byte bAlpha, uint dwFlags);
-
-        [DllImport("user32.dll")]
-        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-
-        [DllImport("user32.dll")]
-        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
-        [DllImport("user32.dll")]
-        private static extern bool UpdateWindow(IntPtr hWnd);
 
         #endregion
 

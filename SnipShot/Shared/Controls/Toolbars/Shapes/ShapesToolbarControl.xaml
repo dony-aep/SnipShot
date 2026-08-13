@@ -10,7 +10,7 @@
 
     <StackPanel Orientation="Horizontal" Spacing="4">
             <!-- Botón Square -->
-            <Button x:Name="SquareButton"
+            <Button x:Name="SquareButton" AutomationProperties.AutomationId="SquareButton" AutomationProperties.Name="Cuadrado"
                     Click="SquareButton_Click"
                     Background="Transparent"
                     BorderThickness="0"
@@ -23,7 +23,7 @@
             </Button>
             
             <!-- Botón Circle -->
-            <Button x:Name="CircleButton"
+            <Button x:Name="CircleButton" AutomationProperties.AutomationId="CircleButton" AutomationProperties.Name="Círculo"
                     Click="CircleButton_Click"
                     Background="Transparent"
                     BorderThickness="0"
@@ -36,7 +36,7 @@
             </Button>
             
             <!-- Botón Line -->
-            <Button x:Name="LineButton"
+            <Button x:Name="LineButton" AutomationProperties.AutomationId="LineButton" AutomationProperties.Name="Línea"
                     Click="LineButton_Click"
                     Background="Transparent"
                     BorderThickness="0"
@@ -49,7 +49,7 @@
             </Button>
             
             <!-- Botón Arrow -->
-            <Button x:Name="ArrowButton"
+            <Button x:Name="ArrowButton" AutomationProperties.AutomationId="ArrowButton" AutomationProperties.Name="Flecha"
                     Click="ArrowButton_Click"
                     Background="Transparent"
                     BorderThickness="0"
@@ -62,7 +62,7 @@
             </Button>
 
             <!-- Botón Star -->
-            <Button x:Name="StarButton"
+            <Button x:Name="StarButton" AutomationProperties.AutomationId="StarButton" AutomationProperties.Name="Estrella"
                     Click="StarButton_Click"
                     Background="Transparent"
                     BorderThickness="0"
@@ -79,7 +79,7 @@
                     Margin="2,0"/>
 
             <!-- Botón Fill -->
-            <Button x:Name="FillButton"
+            <Button x:Name="FillButton" AutomationProperties.AutomationId="FillButton" AutomationProperties.Name="Relleno"
                     Click="FillButton_Click"
                     Background="Transparent"
                     BorderThickness="0"
@@ -95,7 +95,7 @@
             </Button>
 
             <!-- Botón Trazo -->
-            <Button x:Name="StyleButton"
+            <Button x:Name="StyleButton" AutomationProperties.AutomationId="StyleButton" AutomationProperties.Name="Opciones de trazo"
                     Click="StyleButton_Click"
                     Background="Transparent"
                     BorderThickness="0"

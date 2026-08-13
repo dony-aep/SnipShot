@@ -78,7 +78,7 @@
                     <!-- Controles -->
                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
                         <!-- Volver al overlay anterior -->
-                        <Button x:Name="BackButton"
+                        <Button x:Name="BackButton" AutomationProperties.AutomationId="BackButton" AutomationProperties.Name="Volver"
                                 Click="BackButton_Click"
                                 ToolTipService.ToolTip="Volver"
                                 Background="Transparent"
@@ -89,7 +89,7 @@
                         </Button>
                         
                         <!-- Selector de formato -->
-                        <ComboBox x:Name="FormatComboBox"
+                        <ComboBox x:Name="FormatComboBox" AutomationProperties.AutomationId="FormatComboBox"
                                   SelectedIndex="0"
                                   MinWidth="160"
                                   SelectionChanged="Format_Changed">
@@ -132,7 +132,7 @@
                         </ComboBox>
                         
                         <!-- Cerrar -->
-                        <Button x:Name="CloseButton"
+                        <Button x:Name="CloseButton" AutomationProperties.AutomationId="CloseButton" AutomationProperties.Name="Cerrar (ESC)"
                                 Click="Close_Click"
                                 Background="Transparent"
                                 BorderThickness="0"

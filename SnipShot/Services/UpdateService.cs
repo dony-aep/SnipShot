@@ -16,7 +16,14 @@ namespace SnipShot.Services
         private const string GitHubRepo = "SnipShot";
         private const string GitHubApiUrl = $"https://api.github.com/repos/{GitHubOwner}/{GitHubRepo}/releases/latest";
         
-        private static readonly HttpClient _httpClient = new();
+        // El User-Agent lo exige la API de GitHub. Se configura una sola vez aquí en vez de
+        // en cada llamada: mutar DefaultRequestHeaders no es seguro si hay peticiones en curso.
+        // El timeout por defecto de HttpClient son 100 s, demasiado para no dejar la UI colgada.
+        private static readonly HttpClient _httpClient = new()
+        {
+            Timeout = TimeSpan.FromSeconds(15),
+            DefaultRequestHeaders = { { "User-Agent", "SnipShot-UpdateChecker" } }
+        };
         
         /// <summary>
         /// Versión actual de la aplicación (leída del Package.appxmanifest automáticamente).
@@ -88,12 +95,6 @@ namespace SnipShot.Services
         {
             try
             {
-                // Configurar el User-Agent requerido por GitHub API
-                if (!_httpClient.DefaultRequestHeaders.Contains("User-Agent"))
-                {
-                    _httpClient.DefaultRequestHeaders.Add("User-Agent", "SnipShot-UpdateChecker");
-                }
-
                 var response = await _httpClient.GetAsync(GitHubApiUrl);
                 
                 if (!response.IsSuccessStatusCode)
@@ -107,51 +108,15 @@ namespace SnipShot.Services
                 }
 
                 var json = await response.Content.ReadAsStringAsync();
-                using var document = JsonDocument.Parse(json);
-                var root = document.RootElement;
-
-                // Extraer información del release
-                var tagName = root.GetProperty("tag_name").GetString() ?? "";
-                var releasePageUrl = root.GetProperty("html_url").GetString() ?? "";
-                var releaseNotes = root.TryGetProperty("body", out var bodyElement) 
-                    ? bodyElement.GetString() ?? "" 
-                    : "";
-
-                // Parsear versión (eliminar 'v' si existe)
-                var versionString = tagName.TrimStart('v', 'V');
-                if (!Version.TryParse(versionString, out var latestVersion))
-                {
-                    return new UpdateCheckResult
-                    {
-                        ErrorMessage = $"No se pudo parsear la versión: {tagName}"
-                    };
-                }
-
-                // Buscar el asset del instalador (.msixbundle)
-                string? downloadUrl = null;
-                if (root.TryGetProperty("assets", out var assets))
-                {
-                    foreach (var asset in assets.EnumerateArray())
-                    {
-                        var assetName = asset.GetProperty("name").GetString() ?? "";
-                        if (assetName.EndsWith(".msixbundle", StringComparison.OrdinalIgnoreCase))
-                        {
-                            downloadUrl = asset.GetProperty("browser_download_url").GetString();
-                            break;
-                        }
-                    }
-                }
-
-                // Comparar versiones
-                var isUpdateAvailable = latestVersion > CurrentVersion;
-
+                return ParseReleaseResponse(json, CurrentVersion);
+            }
+            catch (TaskCanceledException)
+            {
+                // HttpClient traduce el vencimiento del Timeout en una cancelación,
+                // no en HttpRequestException.
                 return new UpdateCheckResult
                 {
-                    IsUpdateAvailable = isUpdateAvailable,
-                    LatestVersion = latestVersion,
-                    DownloadUrl = downloadUrl,
-                    ReleasePageUrl = releasePageUrl,
-                    ReleaseNotes = releaseNotes
+                    ErrorMessage = "La comprobación tardó demasiado. Revisa tu conexión."
                 };
             }
             catch (HttpRequestException ex)
@@ -175,6 +140,88 @@ namespace SnipShot.Services
                     ErrorMessage = $"Error inesperado: {ex.Message}"
                 };
             }
+        }
+
+        /// <summary>
+        /// Interpreta la respuesta JSON de la API de releases de GitHub.
+        /// </summary>
+        /// <remarks>
+        /// Separado de <see cref="CheckForUpdatesAsync"/> para que la lógica de parseo y
+        /// comparación de versiones se pueda probar sin depender de la red ni del paquete
+        /// instalado. Todos los campos se leen con TryGetProperty porque la respuesta viene de un
+        /// servicio externo y un cambio en su forma no debe tirar la comprobación.
+        /// </remarks>
+        /// <param name="json">Cuerpo JSON devuelto por la API.</param>
+        /// <param name="currentVersion">Versión instalada contra la que comparar.</param>
+        internal static UpdateCheckResult ParseReleaseResponse(string json, Version currentVersion)
+        {
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+
+            if (!root.TryGetProperty("tag_name", out var tagElement))
+            {
+                return new UpdateCheckResult
+                {
+                    ErrorMessage = "La respuesta de GitHub no incluye la versión del release."
+                };
+            }
+
+            var tagName = tagElement.GetString() ?? "";
+            var releasePageUrl = root.TryGetProperty("html_url", out var htmlUrlElement)
+                ? htmlUrlElement.GetString() ?? ""
+                : ReleasesPageUrl;
+            var releaseNotes = root.TryGetProperty("body", out var bodyElement)
+                ? bodyElement.GetString() ?? ""
+                : "";
+
+            // Parsear versión (eliminar 'v' si existe)
+            var versionString = tagName.TrimStart('v', 'V');
+            if (!Version.TryParse(versionString, out var latestVersion))
+            {
+                return new UpdateCheckResult
+                {
+                    ErrorMessage = $"No se pudo parsear la versión: {tagName}"
+                };
+            }
+
+            // Buscar el asset del instalador (.msixbundle)
+            string? downloadUrl = null;
+            if (root.TryGetProperty("assets", out var assets) && assets.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var asset in assets.EnumerateArray())
+                {
+                    if (!asset.TryGetProperty("name", out var nameElement))
+                    {
+                        continue;
+                    }
+
+                    var assetName = nameElement.GetString() ?? "";
+                    if (assetName.EndsWith(".msixbundle", StringComparison.OrdinalIgnoreCase)
+                        && asset.TryGetProperty("browser_download_url", out var urlElement))
+                    {
+                        downloadUrl = urlElement.GetString();
+                        break;
+                    }
+                }
+            }
+
+            // Comparar versiones. Un tag como "v1.2" se parsea con Build/Revision en -1,
+            // que no es comparable con los 4 componentes que siempre trae el paquete;
+            // se normaliza para que la comparación sea entre iguales.
+            var normalizedLatest = new Version(
+                latestVersion.Major,
+                latestVersion.Minor,
+                Math.Max(latestVersion.Build, 0),
+                Math.Max(latestVersion.Revision, 0));
+
+            return new UpdateCheckResult
+            {
+                IsUpdateAvailable = normalizedLatest > currentVersion,
+                LatestVersion = latestVersion,
+                DownloadUrl = downloadUrl,
+                ReleasePageUrl = releasePageUrl,
+                ReleaseNotes = releaseNotes
+            };
         }
 
         /// <summary>

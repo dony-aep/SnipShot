@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using SnipShot.Models;
+using static SnipShot.Models.NativeMethods;
 
 namespace SnipShot.Helpers.Capture
 {
@@ -9,15 +10,6 @@ namespace SnipShot.Helpers.Capture
     /// </summary>
     public static class ColorCaptureHelper
     {
-        [DllImport("gdi32.dll")]
-        private static extern uint GetPixel(IntPtr hdc, int x, int y);
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetDC(IntPtr hwnd);
-
-        [DllImport("user32.dll")]
-        private static extern int ReleaseDC(IntPtr hwnd, IntPtr hdc);
-
         /// <summary>
         /// Captura el color del pixel en las coordenadas de pantalla especificadas
         /// </summary>

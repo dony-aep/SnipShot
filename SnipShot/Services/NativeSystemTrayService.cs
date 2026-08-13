@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.UI.Xaml;
 using SnipShot.Models;
+using static SnipShot.Models.NativeMethods;
 using static SnipShot.Models.NativeSystemTrayStructures;
 
 namespace SnipShot.Services
@@ -53,7 +54,6 @@ namespace SnipShot.Services
         /// <summary>
         /// Delegado para el procedimiento de ventana.
         /// </summary>
-        private delegate IntPtr WndProcDelegate(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
         #endregion
 
@@ -329,7 +329,7 @@ namespace SnipShot.Services
                     uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP | NIF_SHOWTIP,
                     uCallbackMessage = WM_TRAYICON,
                     hIcon = _iconHandle,
-                    szTip = "SnipShot - Captura de pantalla",
+                    szTip = "SnipShot - Captura de pantalla" + Constants.BUILD_SUFFIX,
                     szInfo = string.Empty,
                     szInfoTitle = string.Empty
                 };
@@ -468,28 +468,6 @@ namespace SnipShot.Services
 
         #region Additional P/Invoke
 
-        [StructLayout(LayoutKind.Sequential)]
-        private struct MSG
-        {
-            public IntPtr hwnd;
-            public uint message;
-            public IntPtr wParam;
-            public IntPtr lParam;
-            public uint time;
-            public POINT pt;
-        }
-
-        [DllImport("user32.dll")]
-        private static extern bool GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
-
-        [DllImport("user32.dll")]
-        private static extern bool TranslateMessage(ref MSG lpMsg);
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr DispatchMessage(ref MSG lpMsg);
-
-        [DllImport("user32.dll")]
-        private static extern void PostQuitMessage(int nExitCode);
 
         #endregion
 

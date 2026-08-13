@@ -701,7 +701,7 @@ namespace SnipShot.Features.Capture.Annotations.Managers
 
             if (_selectedShape != null && _selectedShape.Tag is ShapeData newData && _originalShapeData != null)
             {
-                _historyManager?.RecordPathMoved(_selectedShape, _originalShapeData, newData);
+                _historyManager?.RecordPathMoved(_selectedShape, _originalShapeData, newData, UpdateShapeGeometry);
             }
 
             _isDragging = false;
@@ -976,11 +976,11 @@ namespace SnipShot.Features.Capture.Annotations.Managers
             {
                 if (_isRotating)
                 {
-                    _historyManager?.RecordPathMoved(_selectedShape, _originalShapeData, newData);
+                    _historyManager?.RecordPathMoved(_selectedShape, _originalShapeData, newData, UpdateShapeGeometry);
                 }
                 else
                 {
-                    _historyManager?.RecordPathResized(_selectedShape, _originalShapeData, newData);
+                    _historyManager?.RecordPathResized(_selectedShape, _originalShapeData, newData, UpdateShapeGeometry);
                 }
             }
 
@@ -1175,8 +1175,9 @@ namespace SnipShot.Features.Capture.Annotations.Managers
 
             if (_shapesCanvas.Children.Contains(shapeToDelete))
             {
-                _shapesCanvas.Children.Remove(shapeToDelete);
-                _historyManager?.RecordPathRemoved(shapeToDelete);
+                int index = _shapesCanvas.Children.IndexOf(shapeToDelete);
+                _shapesCanvas.Children.RemoveAt(index);
+                _historyManager?.RecordPathRemoved(shapeToDelete, index);
                 return true;
             }
 

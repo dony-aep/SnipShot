@@ -11,8 +11,6 @@
     <UseWinUI>true</UseWinUI>
     <EnableMsixTooling>true</EnableMsixTooling>
     <Nullable>enable</Nullable>
-    <!-- Suprimir warnings de trimming en código auto-generado de XAML -->
-    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,6 +22,13 @@
     <Content Include="Assets\StoreLogo.png" />
     <Content Include="Assets\Wide310x150Logo.scale-200.png" />
     <Content Include="Assets\snipshot.ico" />
+    <!--
+      El arte original (1080x1080) se conserva en el repo para poder regenerar los iconos,
+      pero Windows no lo usa: sin este Remove el glob de Content lo mete en el MSIX y son
+      400 KB muertos en cada paquete.
+    -->
+    <Content Remove="Assets\logo-snipshot-app.png" />
+    <None Include="Assets\logo-snipshot-app.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -60,6 +65,13 @@
     <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
     <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
     <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
+    <!--
+      IL2104 lo emiten WinRT.Runtime y Microsoft.Windows.SDK.NET, ensamblados del Windows App
+      SDK que no controlamos. Se silencia solo ese codigo, en vez de SuppressTrimAnalysisWarnings,
+      para que el analisis siga vigilando el codigo propio: hoy no produce ningun aviso y hay que
+      enterarse si algun cambio futuro introduce reflexion que el trimming pueda romper.
+    -->
+    <NoWarn>$(NoWarn);IL2104</NoWarn>
     <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
     <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
     <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>

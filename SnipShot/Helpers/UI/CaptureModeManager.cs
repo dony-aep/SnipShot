@@ -2,6 +2,7 @@ using System;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Automation;
 
 namespace SnipShot.Helpers.UI
 {
@@ -36,44 +37,23 @@ namespace SnipShot.Helpers.UI
         }
 
         /// <summary>
-        /// Establece el modo de captura rectangular
+        /// Establece el modo de captura activo y actualiza la UI.
+        /// Los glifos deben coincidir con los de la lista en MainWindow.xaml.
         /// </summary>
-        public void SetRectangularMode()
+        /// <param name="mode">Modo tal cual lo espera CaptureScreenAsync</param>
+        public void SetMode(string mode)
         {
-            SetMode("Rectangular", "&#xF407;", "Captura Rectangular");
-        }
+            (string glyph, string tooltip) = mode switch
+            {
+                "Rectangular" => ("\uF407", "Captura Rectangular"),
+                "Ventana" => ("\uF7ED", "Captura de Ventana"),
+                "Pantalla Completa" => ("\uE9A6", "Pantalla Completa"),
+                "Forma Libre" => ("\uF408", "Forma Libre"),
+                _ => throw new ArgumentOutOfRangeException(nameof(mode), $"Modo '{mode}' desconocido.")
+            };
 
-        /// <summary>
-        /// Establece el modo de captura de ventana
-        /// </summary>
-        public void SetWindowMode()
-        {
-            SetMode("Ventana", "&#xF7ED;", "Captura de Ventana");
-        }
-
-        /// <summary>
-        /// Establece el modo de captura de pantalla completa
-        /// </summary>
-        public void SetFullScreenMode()
-        {
-            SetMode("Pantalla Completa", "&#xE9A6;", "Pantalla Completa");
-        }
-
-        /// <summary>
-        /// Establece el modo de captura de forma libre
-        /// </summary>
-        public void SetFreeFormMode()
-        {
-            SetMode("Forma Libre", "&#xF408;", "Forma Libre");
-        }
-
-        /// <summary>
-        /// Establece el modo de captura y actualiza la UI
-        /// </summary>
-        private void SetMode(string mode, string iconGlyph, string tooltip)
-        {
             _currentMode = mode;
-            UpdateCaptureOptionButton(iconGlyph, tooltip);
+            UpdateCaptureOptionButton(glyph, tooltip);
             CaptureModeChanged?.Invoke(this, mode);
         }
 
@@ -82,11 +62,11 @@ namespace SnipShot.Helpers.UI
         /// </summary>
         private void UpdateCaptureOptionButton(string iconGlyph, string tooltip)
         {
-            // Remover los caracteres HTML entity (&#x y ;)
-            var glyphCode = iconGlyph.Replace("&#x", "").Replace(";", "");
-            var glyphChar = (char)Convert.ToInt32(glyphCode, 16);
-            _captureOptionIcon.Glyph = glyphChar.ToString();
+            _captureOptionIcon.Glyph = iconGlyph;
             ToolTipService.SetToolTip(_captureOptionsButton, tooltip);
+            // El botón es solo icono. Sin esto el lector de pantalla anunciaría
+            // el valor inicial del XAML en vez del modo de captura activo.
+            AutomationProperties.SetName(_captureOptionsButton, tooltip);
         }
     }
 }

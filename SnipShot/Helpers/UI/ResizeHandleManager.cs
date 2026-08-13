@@ -29,31 +29,41 @@ namespace SnipShot.Helpers.UI
         /// <summary>
         /// Muestra y posiciona todos los handles alrededor de la selección
         /// </summary>
-        public static void ShowHandles(HandleSet handles, Rect selection)
+        /// <param name="visualScale">
+        /// Factor con el que el llamador esté escalando los handles, para compensar el zoom de
+        /// un ScrollViewer. Las posiciones se calculan con el tamaño ya escalado; si no, el
+        /// handle se despega de la esquina al encoger. El ScaleTransform debe aplicarse desde
+        /// el origen del handle (sin CenterX/CenterY), que es lo que asume este cálculo.
+        /// </param>
+        public static void ShowHandles(HandleSet handles, Rect selection, double visualScale = 1.0)
         {
             // Grosor del brazo de los handles L (para calcular offset de esquinas)
             const double cornerBranchThickness = 4;
-            
+
+            double branch = cornerBranchThickness * visualScale;
+            double ScaledWidth(FrameworkElement handle) => handle.Width * visualScale;
+            double ScaledHeight(FrameworkElement handle) => handle.Height * visualScale;
+
             // Posicionar handles de esquinas (forma L)
             // La esquina interior del L debe coincidir con la esquina de la selección
             // NW: esquina superior izquierda - L abre hacia arriba-izquierda
-            PositionHandle(handles.HandleNW, selection.Left - cornerBranchThickness, selection.Top - cornerBranchThickness);
+            PositionHandle(handles.HandleNW, selection.Left - branch, selection.Top - branch);
             // NE: esquina superior derecha - L abre hacia arriba-derecha
-            PositionHandle(handles.HandleNE, selection.Right - handles.HandleNE.Width + cornerBranchThickness, selection.Top - cornerBranchThickness);
+            PositionHandle(handles.HandleNE, selection.Right - ScaledWidth(handles.HandleNE) + branch, selection.Top - branch);
             // SE: esquina inferior derecha - L abre hacia abajo-derecha
-            PositionHandle(handles.HandleSE, selection.Right - handles.HandleSE.Width + cornerBranchThickness, selection.Bottom - handles.HandleSE.Height + cornerBranchThickness);
+            PositionHandle(handles.HandleSE, selection.Right - ScaledWidth(handles.HandleSE) + branch, selection.Bottom - ScaledHeight(handles.HandleSE) + branch);
             // SW: esquina inferior izquierda - L abre hacia abajo-izquierda
-            PositionHandle(handles.HandleSW, selection.Left - cornerBranchThickness, selection.Bottom - handles.HandleSW.Height + cornerBranchThickness);
+            PositionHandle(handles.HandleSW, selection.Left - branch, selection.Bottom - ScaledHeight(handles.HandleSW) + branch);
 
             // Posicionar handles de bordes (píldoras)
             // N: centro del borde superior
-            PositionHandle(handles.HandleN, selection.Left + selection.Width / 2 - handles.HandleN.Width / 2, selection.Top - handles.HandleN.Height / 2);
+            PositionHandle(handles.HandleN, selection.Left + selection.Width / 2 - ScaledWidth(handles.HandleN) / 2, selection.Top - ScaledHeight(handles.HandleN) / 2);
             // S: centro del borde inferior
-            PositionHandle(handles.HandleS, selection.Left + selection.Width / 2 - handles.HandleS.Width / 2, selection.Bottom - handles.HandleS.Height / 2);
+            PositionHandle(handles.HandleS, selection.Left + selection.Width / 2 - ScaledWidth(handles.HandleS) / 2, selection.Bottom - ScaledHeight(handles.HandleS) / 2);
             // E: centro del borde derecho
-            PositionHandle(handles.HandleE, selection.Right - handles.HandleE.Width / 2, selection.Top + selection.Height / 2 - handles.HandleE.Height / 2);
+            PositionHandle(handles.HandleE, selection.Right - ScaledWidth(handles.HandleE) / 2, selection.Top + selection.Height / 2 - ScaledHeight(handles.HandleE) / 2);
             // W: centro del borde izquierdo
-            PositionHandle(handles.HandleW, selection.Left - handles.HandleW.Width / 2, selection.Top + selection.Height / 2 - handles.HandleW.Height / 2);
+            PositionHandle(handles.HandleW, selection.Left - ScaledWidth(handles.HandleW) / 2, selection.Top + selection.Height / 2 - ScaledHeight(handles.HandleW) / 2);
 
             // Show all handles
             handles.HandleNW.Visibility = Visibility.Visible;

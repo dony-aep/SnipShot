@@ -50,7 +50,7 @@
             <!-- Controles de formato -->
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <!-- Selector de Fuente -->
-                <ComboBox x:Name="FontFamilyComboBox"
+                <ComboBox x:Name="FontFamilyComboBox" AutomationProperties.AutomationId="FontFamilyComboBox" AutomationProperties.Name="Fuente"
                           Width="140"
                           Height="36"
                           VerticalAlignment="Center"
@@ -68,7 +68,7 @@
                 </ComboBox>
 
                 <!-- Selector de Tamaño (Editable) -->
-                <ComboBox x:Name="FontSizeComboBox"
+                <ComboBox x:Name="FontSizeComboBox" AutomationProperties.AutomationId="FontSizeComboBox" AutomationProperties.Name="Tamaño de fuente"
                           IsEditable="True"
                           Width="75"
                           Height="36"
@@ -100,7 +100,7 @@
                         Margin="4,6"/>
 
                 <!-- Estilos de texto -->
-                <ToggleButton x:Name="BoldToggle"
+                <ToggleButton x:Name="BoldToggle" AutomationProperties.AutomationId="BoldToggle" AutomationProperties.Name="Negrita (Ctrl+B)"
                               Click="BoldToggle_Click"
                               Width="36" Height="36"
                               Padding="0"
@@ -108,7 +108,7 @@
                               ToolTipService.ToolTip="Negrita (Ctrl+B)">
                     <FontIcon Glyph="&#xE8DD;" FontSize="14"/>
                 </ToggleButton>
-                <ToggleButton x:Name="ItalicToggle"
+                <ToggleButton x:Name="ItalicToggle" AutomationProperties.AutomationId="ItalicToggle" AutomationProperties.Name="Cursiva (Ctrl+I)"
                               Click="ItalicToggle_Click"
                               Width="36" Height="36"
                               Padding="0"
@@ -116,7 +116,7 @@
                               ToolTipService.ToolTip="Cursiva (Ctrl+I)">
                     <FontIcon Glyph="&#xE8DB;" FontSize="14"/>
                 </ToggleButton>
-                <ToggleButton x:Name="UnderlineToggle"
+                <ToggleButton x:Name="UnderlineToggle" AutomationProperties.AutomationId="UnderlineToggle" AutomationProperties.Name="Subrayado (Ctrl+U)"
                               Click="UnderlineToggle_Click"
                               Width="36" Height="36"
                               Padding="0"
@@ -124,7 +124,7 @@
                               ToolTipService.ToolTip="Subrayado (Ctrl+U)">
                     <FontIcon Glyph="&#xE8DC;" FontSize="14"/>
                 </ToggleButton>
-                <ToggleButton x:Name="StrikethroughToggle"
+                <ToggleButton x:Name="StrikethroughToggle" AutomationProperties.AutomationId="StrikethroughToggle" AutomationProperties.Name="Tachado"
                               Click="StrikethroughToggle_Click"
                               Width="36" Height="36"
                               Padding="0"
@@ -138,7 +138,7 @@
                         Margin="4,6"/>
 
                 <!-- Botón Color de Texto -->
-                <Button x:Name="TextColorButton"
+                <Button x:Name="TextColorButton" AutomationProperties.AutomationId="TextColorButton" AutomationProperties.Name="Color del texto"
                         Click="TextColorButton_Click"
                         Width="36" Height="36"
                         Padding="0"
@@ -159,7 +159,7 @@
                 </Button>
 
                 <!-- Botón Color de Resaltado -->
-                <Button x:Name="TextHighlightButton"
+                <Button x:Name="TextHighlightButton" AutomationProperties.AutomationId="TextHighlightButton" AutomationProperties.Name="Color de resaltado"
                         Click="TextHighlightButton_Click"
                         Width="36" Height="36"
                         Padding="0"

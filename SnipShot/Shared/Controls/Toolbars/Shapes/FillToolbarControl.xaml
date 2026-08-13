@@ -19,7 +19,7 @@
             <!-- Sección de opacidad del relleno -->
             <StackPanel Spacing="6">
                 <TextBlock Text="Opacidad del relleno" FontWeight="SemiBold"/>
-                <Slider x:Name="OpacitySlider"
+                <Slider x:Name="OpacitySlider" AutomationProperties.AutomationId="OpacitySlider"
                         Minimum="0"
                         Maximum="100"
                         Value="0"

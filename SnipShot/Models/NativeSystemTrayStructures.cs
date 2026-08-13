@@ -4,8 +4,8 @@ using System.Runtime.InteropServices;
 namespace SnipShot.Models
 {
     /// <summary>
-    /// Estructuras nativas y P/Invoke para Shell_NotifyIcon (System Tray).
-    /// Implementación sin dependencias externas para máximo rendimiento.
+    /// Constantes y estructuras propias de Shell_NotifyIcon (System Tray).
+    /// Las firmas P/Invoke que las usan están en <see cref="NativeMethods"/>.
     /// </summary>
     public static class NativeSystemTrayStructures
     {
@@ -94,16 +94,6 @@ namespace SnipShot.Models
         }
 
         /// <summary>
-        /// Estructura POINT para coordenadas.
-        /// </summary>
-        [StructLayout(LayoutKind.Sequential)]
-        public struct POINT
-        {
-            public int X;
-            public int Y;
-        }
-
-        /// <summary>
         /// Información de clase de ventana.
         /// </summary>
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -122,128 +112,6 @@ namespace SnipShot.Models
             public string lpszClassName;
             public IntPtr hIconSm;
         }
-
-        #endregion
-
-        #region P/Invoke
-
-        /// <summary>
-        /// Agrega, modifica o elimina un icono de la bandeja del sistema.
-        /// </summary>
-        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
-        public static extern bool Shell_NotifyIcon(int dwMessage, ref NOTIFYICONDATA lpData);
-
-        /// <summary>
-        /// Carga un icono desde un archivo.
-        /// </summary>
-        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        public static extern IntPtr LoadImage(
-            IntPtr hInstance,
-            string lpszName,
-            uint uType,
-            int cxDesired,
-            int cyDesired,
-            uint fuLoad);
-
-        /// <summary>
-        /// Destruye un icono cargado.
-        /// </summary>
-        [DllImport("user32.dll")]
-        public static extern bool DestroyIcon(IntPtr hIcon);
-
-        /// <summary>
-        /// Obtiene la posición del cursor.
-        /// </summary>
-        [DllImport("user32.dll")]
-        public static extern bool GetCursorPos(out POINT lpPoint);
-
-        /// <summary>
-        /// Crea un menú popup.
-        /// </summary>
-        [DllImport("user32.dll")]
-        public static extern IntPtr CreatePopupMenu();
-
-        /// <summary>
-        /// Destruye un menú.
-        /// </summary>
-        [DllImport("user32.dll")]
-        public static extern bool DestroyMenu(IntPtr hMenu);
-
-        /// <summary>
-        /// Añade un item al menú.
-        /// </summary>
-        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        public static extern bool AppendMenu(IntPtr hMenu, uint uFlags, uint uIDNewItem, string lpNewItem);
-
-        /// <summary>
-        /// Muestra el menú popup y devuelve la selección.
-        /// </summary>
-        [DllImport("user32.dll")]
-        public static extern int TrackPopupMenuEx(
-            IntPtr hMenu,
-            uint uFlags,
-            int x,
-            int y,
-            IntPtr hWnd,
-            IntPtr lptpm);
-
-        /// <summary>
-        /// Pone la ventana en primer plano.
-        /// </summary>
-        [DllImport("user32.dll")]
-        public static extern bool SetForegroundWindow(IntPtr hWnd);
-
-        /// <summary>
-        /// Registra una clase de ventana.
-        /// </summary>
-        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern ushort RegisterClassEx(ref WNDCLASSEX lpwcx);
-
-        /// <summary>
-        /// Desregistra una clase de ventana.
-        /// </summary>
-        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        public static extern bool UnregisterClass(string lpClassName, IntPtr hInstance);
-
-        /// <summary>
-        /// Crea una ventana.
-        /// </summary>
-        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern IntPtr CreateWindowEx(
-            uint dwExStyle,
-            string lpClassName,
-            string lpWindowName,
-            uint dwStyle,
-            int x, int y,
-            int nWidth, int nHeight,
-            IntPtr hWndParent,
-            IntPtr hMenu,
-            IntPtr hInstance,
-            IntPtr lpParam);
-
-        /// <summary>
-        /// Destruye una ventana.
-        /// </summary>
-        [DllImport("user32.dll")]
-        public static extern bool DestroyWindow(IntPtr hWnd);
-
-        /// <summary>
-        /// Procedimiento de ventana por defecto.
-        /// </summary>
-        [DllImport("user32.dll")]
-        public static extern IntPtr DefWindowProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam);
-
-        /// <summary>
-        /// Obtiene el handle del módulo actual.
-        /// </summary>
-        [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
-        public static extern IntPtr GetModuleHandle(string? lpModuleName);
-
-        /// <summary>
-        /// Envía un mensaje a la cola de mensajes.
-        /// </summary>
-        [DllImport("user32.dll")]
-        public static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
         #endregion
 

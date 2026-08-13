@@ -247,28 +247,45 @@ namespace SnipShot.Features.Capture.Modes.WindowCapture
 
         #region Floating Menu Handlers
 
-        private void FloatingRectangular_Click(object sender, RoutedEventArgs e)
+        // El cierre va en ItemClick y no en SelectionChanged porque un ListView no dispara
+        // SelectionChanged al volver a pulsar el item ya seleccionado; sin esto, elegir el
+        // modo actual dejaría el flyout abierto.
+        private void CaptureModeButton_Click(object sender, RoutedEventArgs e)
         {
-            UpdateCaptureModeIcon("&#xF407;");
-            RaiseModeChangeRequested(CaptureMode.Rectangular);
+            FlyoutHelper.ShowOverSelectedItem(CaptureModeButton, CaptureModeList);
         }
 
-        private void FloatingWindow_Click(object sender, RoutedEventArgs e)
+        private void CaptureModeList_ItemClick(object sender, ItemClickEventArgs e)
         {
-            // Ya estamos en modo ventana
-            UpdateCaptureModeIcon("&#xF7ED;");
+            FlyoutHelper.HideAttached(CaptureModeButton);
         }
 
-        private void FloatingFullScreen_Click(object sender, RoutedEventArgs e)
+        private void CaptureModeList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            UpdateCaptureModeIcon("&#xE9A6;");
-            RaiseModeChangeRequested(CaptureMode.FullScreen);
-        }
+            if (CaptureModeList.SelectedItem is not ListViewItem item || item.Tag is not string mode)
+            {
+                return;
+            }
 
-        private void FloatingFreeForm_Click(object sender, RoutedEventArgs e)
-        {
-            UpdateCaptureModeIcon("&#xF408;");
-            RaiseModeChangeRequested(CaptureMode.FreeForm);
+            switch (mode)
+            {
+                case "Rectangular":
+                    UpdateCaptureModeIcon("&#xF407;");
+                    RaiseModeChangeRequested(CaptureMode.Rectangular);
+                    break;
+                case "Ventana":
+                    // Ya estamos en modo ventana
+                    UpdateCaptureModeIcon("&#xF7ED;");
+                    break;
+                case "Pantalla Completa":
+                    UpdateCaptureModeIcon("&#xE9A6;");
+                    RaiseModeChangeRequested(CaptureMode.FullScreen);
+                    break;
+                case "Forma Libre":
+                    UpdateCaptureModeIcon("&#xF408;");
+                    RaiseModeChangeRequested(CaptureMode.FreeForm);
+                    break;
+            }
         }
 
         private void ColorPickerButton_Click(object sender, RoutedEventArgs e)

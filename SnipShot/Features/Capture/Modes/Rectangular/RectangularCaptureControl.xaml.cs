@@ -738,22 +738,27 @@ namespace SnipShot.Features.Capture.Modes.Rectangular
                 double width = Math.Abs(_currentPoint.X - _startPoint.X);
                 double height = Math.Abs(_currentPoint.Y - _startPoint.Y);
                 
-                if (width >= Constants.MIN_SELECTION_SIZE && height >= Constants.MIN_SELECTION_SIZE)
+                // Un clic suelto no es una selección: cancela y deja el overlay listo.
+                if (width < Constants.MIN_DRAG_DISTANCE && height < Constants.MIN_DRAG_DISTANCE)
                 {
-                    // Transition to Selected state
-                    _state = SelectionState.Selected;
-                    ShowHandles();
-                    ShowFloatingToolbar();
-                }
-                else
-                {
-                    // Too small, reset to initial state
                     _state = SelectionState.None;
                     _isSelecting = false;
                     SelectionBorder.Visibility = Visibility.Collapsed;
                     CoordinatesDisplay.Visibility = Visibility.Collapsed;
                     SetShadeVisibility(false);
+                    return;
                 }
+
+                // Un arrastre deliberado pero más pequeño que el mínimo se amplía hasta él,
+                // igual que hace el editor al recortar. Antes se descartaba en silencio: no
+                // aparecía la barra de herramientas y había que repetir la selección sin
+                // ninguna pista de por qué no había funcionado.
+                ExpandSelectionToMinimumSize();
+
+                _state = SelectionState.Selected;
+                UpdateSelectionVisual();
+                ShowHandles();
+                ShowFloatingToolbar();
             }
         }
 
@@ -767,8 +772,9 @@ namespace SnipShot.Features.Capture.Modes.Rectangular
                 _textManipulation?.Deselect();
                 if (ShapesCanvas.Children.Contains(hitText))
                 {
-                    ShapesCanvas.Children.Remove(hitText);
-                    _historyManager.RecordElementRemoved(hitText);
+                    int index = ShapesCanvas.Children.IndexOf(hitText);
+                    ShapesCanvas.Children.RemoveAt(index);
+                    _historyManager.RecordElementRemoved(hitText, index);
                 }
                 return;
             }
@@ -783,8 +789,9 @@ namespace SnipShot.Features.Capture.Modes.Rectangular
 
                 if (ShapesCanvas.Children.Contains(hitPath))
                 {
-                    ShapesCanvas.Children.Remove(hitPath);
-                    _historyManager.RecordPathRemoved(hitPath);
+                    int index = ShapesCanvas.Children.IndexOf(hitPath);
+                    ShapesCanvas.Children.RemoveAt(index);
+                    _historyManager.RecordPathRemoved(hitPath, index);
                 }
             }
         }
@@ -935,6 +942,38 @@ namespace SnipShot.Features.Capture.Modes.Rectangular
             _state = SelectionState.None;
             RootGrid.ReleasePointerCaptures();
             RaiseCaptureCancelled();
+        }
+
+        /// <summary>
+        /// Amplía la selección hasta MIN_SELECTION_SIZE en los lados que se queden cortos,
+        /// respetando la dirección del arrastre y sin salirse del canvas.
+        /// </summary>
+        private void ExpandSelectionToMinimumSize()
+        {
+            _currentPoint.X = ExpandAxis(_startPoint.X, _currentPoint.X, RootGrid.ActualWidth);
+            _currentPoint.Y = ExpandAxis(_startPoint.Y, _currentPoint.Y, RootGrid.ActualHeight);
+        }
+
+        /// <summary>
+        /// Devuelve el extremo del eje separado del origen al menos MIN_SELECTION_SIZE. Si al
+        /// crecer en la dirección del arrastre se saldría del canvas, crece hacia el otro lado.
+        /// </summary>
+        private static double ExpandAxis(double start, double end, double canvasSize)
+        {
+            if (Math.Abs(end - start) >= Constants.MIN_SELECTION_SIZE)
+            {
+                return end;
+            }
+
+            double direction = end >= start ? 1 : -1;
+            double expanded = start + (direction * Constants.MIN_SELECTION_SIZE);
+
+            if (expanded < 0 || expanded > canvasSize)
+            {
+                expanded = start - (direction * Constants.MIN_SELECTION_SIZE);
+            }
+
+            return Math.Clamp(expanded, 0, canvasSize);
         }
 
         private void UpdateSelectionVisual()
@@ -1431,31 +1470,48 @@ namespace SnipShot.Features.Capture.Modes.Rectangular
 
         #region Floating Menu Handlers
 
-        private void FloatingRectangular_Click(object sender, RoutedEventArgs e)
+        // El cierre va en ItemClick y no en SelectionChanged porque un ListView no dispara
+        // SelectionChanged al volver a pulsar el item ya seleccionado; sin esto, elegir el
+        // modo actual dejaría el flyout abierto.
+        private void CaptureModeButton_Click(object sender, RoutedEventArgs e)
         {
-            // Ya estamos en modo rectangular, solo actualizar ícono
-            UpdateCaptureModeIcon("&#xF407;");
+            FlyoutHelper.ShowOverSelectedItem(CaptureModeButton, CaptureModeList);
         }
 
-        private void FloatingWindow_Click(object sender, RoutedEventArgs e)
+        private void CaptureModeList_ItemClick(object sender, ItemClickEventArgs e)
         {
-            // Solicitar cambio a modo ventana
-            UpdateCaptureModeIcon("&#xF7ED;");
-            RaiseModeChangeRequested(CaptureMode.Window);
+            FlyoutHelper.HideAttached(CaptureModeButton);
         }
 
-        private void FloatingFullScreen_Click(object sender, RoutedEventArgs e)
+        private void CaptureModeList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // Solicitar cambio a pantalla completa
-            UpdateCaptureModeIcon("&#xE9A6;");
-            RaiseModeChangeRequested(CaptureMode.FullScreen);
-        }
+            if (CaptureModeList.SelectedItem is not ListViewItem item || item.Tag is not string mode)
+            {
+                return;
+            }
 
-        private void FloatingFreeForm_Click(object sender, RoutedEventArgs e)
-        {
-            // Solicitar cambio a forma libre
-            UpdateCaptureModeIcon("&#xF408;");
-            RaiseModeChangeRequested(CaptureMode.FreeForm);
+            switch (mode)
+            {
+                case "Rectangular":
+                    // Ya estamos en modo rectangular, solo actualizar ícono
+                    UpdateCaptureModeIcon("&#xF407;");
+                    break;
+                case "Ventana":
+                    // Solicitar cambio a modo ventana
+                    UpdateCaptureModeIcon("&#xF7ED;");
+                    RaiseModeChangeRequested(CaptureMode.Window);
+                    break;
+                case "Pantalla Completa":
+                    // Solicitar cambio a pantalla completa
+                    UpdateCaptureModeIcon("&#xE9A6;");
+                    RaiseModeChangeRequested(CaptureMode.FullScreen);
+                    break;
+                case "Forma Libre":
+                    // Solicitar cambio a forma libre
+                    UpdateCaptureModeIcon("&#xF408;");
+                    RaiseModeChangeRequested(CaptureMode.FreeForm);
+                    break;
+            }
         }
 
         private void ColorPickerButton_Click(object sender, RoutedEventArgs e)
@@ -2112,29 +2168,43 @@ namespace SnipShot.Features.Capture.Modes.Rectangular
 
         private void UndoButton_Click(object sender, RoutedEventArgs e)
         {
-            // Guardar referencia a la forma seleccionada antes del Undo
-            var previouslySelectedShape = _shapeManipulation?.SelectedShape;
-            
-            _historyManager?.Undo();
-            
-            // Si la forma seleccionada fue eliminada del canvas, deseleccionar
-            if (previouslySelectedShape != null && !ShapesCanvas.Children.Contains(previouslySelectedShape))
-            {
-                DeselectShape();
-            }
+            ApplyHistoryStep(() => _historyManager?.Undo());
         }
 
         private void RedoButton_Click(object sender, RoutedEventArgs e)
         {
-            // Guardar referencia a la forma seleccionada antes del Redo
-            var previouslySelectedShape = _shapeManipulation?.SelectedShape;
-            
-            _historyManager?.Redo();
-            
-            // Si la forma seleccionada fue eliminada del canvas, deseleccionar
-            if (previouslySelectedShape != null && !ShapesCanvas.Children.Contains(previouslySelectedShape))
+            ApplyHistoryStep(() => _historyManager?.Redo());
+        }
+
+        /// <summary>
+        /// Ejecuta un paso del historial y deselecciona lo que haya desaparecido del canvas.
+        /// </summary>
+        /// <remarks>
+        /// Cubre forma, texto y emoji. Los tres dibujan su marco de manipulación en
+        /// ShapeHandlesCanvas, y si el elemento se va del canvas sin deseleccionar, el marco
+        /// se queda flotando sobre una anotación que ya no existe y se puede arrastrar.
+        /// </remarks>
+        private void ApplyHistoryStep(Action historyStep)
+        {
+            var selectedShape = _shapeManipulation?.SelectedShape;
+            var selectedText = _textManipulation?.SelectedText;
+            var selectedEmoji = _emojiManipulation?.SelectedEmoji;
+
+            historyStep();
+
+            if (selectedShape != null && !ShapesCanvas.Children.Contains(selectedShape))
             {
-                DeselectShape();
+                _shapeManipulation?.Deselect();
+            }
+
+            if (selectedText != null && !ShapesCanvas.Children.Contains(selectedText))
+            {
+                _textManipulation?.Deselect();
+            }
+
+            if (selectedEmoji != null && !ShapesCanvas.Children.Contains(selectedEmoji))
+            {
+                _emojiManipulation?.Deselect();
             }
         }
 

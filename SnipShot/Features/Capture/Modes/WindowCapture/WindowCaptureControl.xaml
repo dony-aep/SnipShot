@@ -57,48 +57,63 @@
                 
                 <StackPanel Orientation="Horizontal" Spacing="6">
                     <!-- Menú desplegable de modos -->
-                    <Button x:Name="CaptureModeButton"
+                    <Button x:Name="CaptureModeButton" AutomationProperties.AutomationId="CaptureModeButton" AutomationProperties.Name="Modo de captura"
                            ToolTipService.ToolTip="Modo de captura"
+                           Click="CaptureModeButton_Click"
                            MinWidth="68" Height="34" Padding="10,6">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <FontIcon x:Name="CaptureModeIcon" Glyph="&#xF7ED;" FontSize="16" Foreground="{ThemeResource OverlayTextBrush}"/>
                             <FontIcon Glyph="&#xE70D;" FontSize="11" Foreground="{ThemeResource OverlayTextBrush}"/>
                         </StackPanel>
-                        <Button.Flyout>
-                            <MenuFlyout Placement="Bottom">
-                                <MenuFlyoutItem Text="Captura Rectangular" 
-                                              Click="FloatingRectangular_Click">
-                                    <MenuFlyoutItem.Icon>
-                                        <FontIcon Glyph="&#xF407;"/>
-                                    </MenuFlyoutItem.Icon>
-                                </MenuFlyoutItem>
-                                
-                                <MenuFlyoutItem Text="Captura de Ventana" 
-                                              Click="FloatingWindow_Click">
-                                    <MenuFlyoutItem.Icon>
-                                        <FontIcon Glyph="&#xF7ED;"/>
-                                    </MenuFlyoutItem.Icon>
-                                </MenuFlyoutItem>
-                                
-                                <MenuFlyoutItem Text="Pantalla Completa" 
-                                              Click="FloatingFullScreen_Click">
-                                    <MenuFlyoutItem.Icon>
-                                        <FontIcon Glyph="&#xE9A6;"/>
-                                    </MenuFlyoutItem.Icon>
-                                </MenuFlyoutItem>
-                                
-                                <MenuFlyoutItem Text="Forma Libre" 
-                                              Click="FloatingFreeForm_Click">
-                                    <MenuFlyoutItem.Icon>
-                                        <FontIcon Glyph="&#xF408;"/>
-                                    </MenuFlyoutItem.Icon>
-                                </MenuFlyoutItem>
-                            </MenuFlyout>
-                        </Button.Flyout>
+                        <FlyoutBase.AttachedFlyout>
+                            <Flyout Placement="BottomEdgeAlignedLeft">
+                                <Flyout.FlyoutPresenterStyle>
+                                    <Style TargetType="FlyoutPresenter" BasedOn="{StaticResource DefaultFlyoutPresenterStyle}">
+                                        <Setter Property="Padding" Value="4"/>
+                                        <Setter Property="MinWidth" Value="0"/>
+                                    </Style>
+                                </Flyout.FlyoutPresenterStyle>
+                                <!-- SelectedIndex apunta al modo de este overlay, así que el
+                                     SelectionChanged que dispara al cargar cae en la rama no-op -->
+                                <ListView x:Name="CaptureModeList" AutomationProperties.AutomationId="CaptureModeList"
+                                          SelectedIndex="1"
+                                          IsItemClickEnabled="True"
+                                          ItemClick="CaptureModeList_ItemClick"
+                                          SelectionChanged="CaptureModeList_SelectionChanged">
+                                    <ListViewItem Tag="Rectangular">
+                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                            <FontIcon Glyph="&#xF407;" FontSize="16"/>
+                                            <TextBlock Text="Rectangular"/>
+                                        </StackPanel>
+                                    </ListViewItem>
+
+                                    <ListViewItem Tag="Ventana">
+                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                            <FontIcon Glyph="&#xF7ED;" FontSize="16"/>
+                                            <TextBlock Text="Ventana"/>
+                                        </StackPanel>
+                                    </ListViewItem>
+
+                                    <ListViewItem Tag="Pantalla Completa">
+                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                            <FontIcon Glyph="&#xE9A6;" FontSize="16"/>
+                                            <TextBlock Text="Pantalla Completa"/>
+                                        </StackPanel>
+                                    </ListViewItem>
+
+                                    <ListViewItem Tag="Forma Libre">
+                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                            <FontIcon Glyph="&#xF408;" FontSize="16"/>
+                                            <TextBlock Text="Forma Libre"/>
+                                        </StackPanel>
+                                    </ListViewItem>
+                                </ListView>
+                            </Flyout>
+                        </FlyoutBase.AttachedFlyout>
                     </Button>
                     
                     <!-- Botón selector de color -->
-                    <Button x:Name="ColorPickerButton"
+                    <Button x:Name="ColorPickerButton" AutomationProperties.AutomationId="ColorPickerButton" AutomationProperties.Name="Selector de Color"
                            Click="ColorPickerButton_Click"
                            ToolTipService.ToolTip="Selector de Color"
                            Width="34" Height="34" Padding="0">
@@ -110,7 +125,7 @@
                            Margin="3,7"/>
                     
                     <!-- Botón cerrar -->
-                    <Button x:Name="FloatingCloseButton"
+                    <Button x:Name="FloatingCloseButton" AutomationProperties.AutomationId="FloatingCloseButton" AutomationProperties.Name="Cerrar (ESC)"
                            Click="FloatingClose_Click"
                            ToolTipService.ToolTip="Cerrar (ESC)"
                            Width="34" Height="34" Padding="0">

@@ -22,7 +22,7 @@
             </Grid.ColumnDefinitions>
 
             <!-- Botón volver -->
-            <Button x:Name="BackButton"
+            <Button x:Name="BackButton" AutomationProperties.AutomationId="BackButton" AutomationProperties.Name="Volver"
                    Grid.Column="0"
                    Click="BackButton_Click"
                    ToolTipService.ToolTip="Volver"
@@ -105,7 +105,7 @@
                                                    TextWrapping="Wrap"/>
                                     </StackPanel>
 
-                                    <ToggleSwitch x:Name="AutoSaveToggle"
+                                    <ToggleSwitch x:Name="AutoSaveToggle" AutomationProperties.AutomationId="AutoSaveToggle"
                                                   Grid.Column="1"
                                                   HorizontalAlignment="Right"
                                                   OnContent="Activado"
@@ -155,7 +155,7 @@
                                                TextWrapping="Wrap"/>
                                 </StackPanel>
 
-                                <ToggleSwitch x:Name="HideOnCaptureToggle"
+                                <ToggleSwitch x:Name="HideOnCaptureToggle" AutomationProperties.AutomationId="HideOnCaptureToggle"
                                               Grid.Column="1"
                                               HorizontalAlignment="Right"
                                               OnContent="Activado"
@@ -182,7 +182,7 @@
                                                TextWrapping="Wrap"/>
                                 </StackPanel>
 
-                                <ToggleSwitch x:Name="MinimizeToTrayToggle"
+                                <ToggleSwitch x:Name="MinimizeToTrayToggle" AutomationProperties.AutomationId="MinimizeToTrayToggle"
                                               Grid.Column="1"
                                               HorizontalAlignment="Right"
                                               OnContent="Activado"
@@ -210,7 +210,7 @@
                                                TextWrapping="Wrap"/>
                                 </StackPanel>
 
-                                <ToggleSwitch x:Name="StartWithWindowsToggle"
+                                <ToggleSwitch x:Name="StartWithWindowsToggle" AutomationProperties.AutomationId="StartWithWindowsToggle"
                                               Grid.Column="1"
                                               HorizontalAlignment="Right"
                                               OnContent="Activado"
@@ -244,7 +244,7 @@
                                            TextWrapping="Wrap"/>
                             </StackPanel>
 
-                            <ToggleSwitch x:Name="ConfirmDeleteToggle"
+                            <ToggleSwitch x:Name="ConfirmDeleteToggle" AutomationProperties.AutomationId="ConfirmDeleteToggle"
                                           Grid.Column="1"
                                           HorizontalAlignment="Right"
                                           OnContent="Activado"
@@ -272,7 +272,7 @@
                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 </StackPanel>
 
-                                <ToggleSwitch x:Name="BorderToggle"
+                                <ToggleSwitch x:Name="BorderToggle" AutomationProperties.AutomationId="BorderToggle"
                                               Grid.Column="1"
                                               HorizontalAlignment="Right"
                                               OnContent="Activado"
@@ -306,7 +306,7 @@
                                 <!-- Color -->
                                 <Grid ColumnDefinitions="*,Auto">
                                     <TextBlock Text="Color" VerticalAlignment="Center"/>
-                                    <Button x:Name="BorderColorButton"
+                                    <Button x:Name="BorderColorButton" AutomationProperties.AutomationId="BorderColorButton" AutomationProperties.Name="Cambiar color"
                                             Grid.Column="1"
                                             Width="40"
                                             Height="40"
@@ -325,7 +325,7 @@
                                 <!-- Thickness -->
                                 <Grid ColumnDefinitions="*,Auto">
                                     <TextBlock Text="Grosor (px)" VerticalAlignment="Center"/>
-                                    <Slider x:Name="BorderThicknessSlider"
+                                    <Slider x:Name="BorderThicknessSlider" AutomationProperties.AutomationId="BorderThicknessSlider"
                                             Grid.Column="1"
                                             Width="200"
                                             Minimum="1"
@@ -349,12 +349,17 @@
                         <!-- InfoBar de advertencia para Snipping Tool -->
                         <InfoBar x:Name="SnippingToolWarningInfoBar"
                                  Title="Snipping Tool está usando Print Screen"
-                                 Message="Windows tiene configurada la tecla Print Screen para abrir Snipping Tool. Para usar Print Screen con SnipShot, desactiva esta opción en la configuración de Windows."
+                                 Message="Windows tiene configurada la tecla Print Screen para abrir Snipping Tool. Para usar Print Screen con SnipShot, desactiva esa opción en la configuración de Windows."
                                  Severity="Warning"
                                  IsOpen="False"
                                  IsClosable="True">
+                            <!-- La app no puede desactivarlo por su cuenta: al estar empaquetada
+                                 en MSIX, sus escrituras a HKCU se virtualizan a un hive privado
+                                 y el sistema nunca las ve. Desactivar esa virtualización exige
+                                 la capacidad restringida unvirtualizedResources. -->
                             <InfoBar.ActionButton>
-                                <Button Content="Abrir configuración de Windows"
+                                <Button x:Name="OpenWindowsKeyboardSettingsButton" AutomationProperties.AutomationId="OpenWindowsKeyboardSettingsButton"
+                                        Content="Abrir configuración de Windows"
                                         Click="OpenWindowsKeyboardSettings_Click"/>
                             </InfoBar.ActionButton>
                         </InfoBar>
@@ -376,7 +381,7 @@
                                                TextWrapping="Wrap"/>
                                 </StackPanel>
 
-                                <ToggleSwitch x:Name="PrintScreenHotkeyToggle"
+                                <ToggleSwitch x:Name="PrintScreenHotkeyToggle" AutomationProperties.AutomationId="PrintScreenHotkeyToggle"
                                               Grid.Column="1"
                                               HorizontalAlignment="Right"
                                               OnContent="Activado"
@@ -403,7 +408,7 @@
                                                TextWrapping="Wrap"/>
                                 </StackPanel>
 
-                                <ToggleSwitch x:Name="CtrlShiftSHotkeyToggle"
+                                <ToggleSwitch x:Name="CtrlShiftSHotkeyToggle" AutomationProperties.AutomationId="CtrlShiftSHotkeyToggle"
                                               Grid.Column="1"
                                               HorizontalAlignment="Right"
                                               OnContent="Activado"
@@ -505,10 +510,10 @@
                                              Width="20"
                                              Height="20"
                                              Visibility="Collapsed"/>
-                                <Button x:Name="CheckUpdatesButton"
+                                <Button x:Name="CheckUpdatesButton" AutomationProperties.AutomationId="CheckUpdatesButton"
                                        Content="Buscar actualizaciones"
                                        Click="CheckUpdatesButton_Click"/>
-                                <Button x:Name="DownloadUpdateButton"
+                                <Button x:Name="DownloadUpdateButton" AutomationProperties.AutomationId="DownloadUpdateButton"
                                        Content="Descargar"
                                        Style="{ThemeResource AccentButtonStyle}"
                                        Visibility="Collapsed"

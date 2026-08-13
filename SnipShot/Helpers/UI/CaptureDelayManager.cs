@@ -2,6 +2,7 @@ using System;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Automation;
 
 namespace SnipShot.Helpers.UI
 {
@@ -36,44 +37,17 @@ namespace SnipShot.Helpers.UI
         }
 
         /// <summary>
-        /// Establece delay de 0 segundos (sin delay)
+        /// Establece el delay antes de capturar y actualiza la UI
         /// </summary>
-        public void SetNoDelay()
+        /// <param name="seconds">Segundos de espera</param>
+        public void SetDelay(int seconds)
         {
-            SetDelay(0, "0s", "Sin delay");
-        }
+            string tooltip = seconds == 0
+                ? "Sin delay"
+                : $"{seconds} segundos de delay";
 
-        /// <summary>
-        /// Establece delay de 3 segundos
-        /// </summary>
-        public void SetDelay3Seconds()
-        {
-            SetDelay(3, "3s", "3 segundos de delay");
-        }
-
-        /// <summary>
-        /// Establece delay de 5 segundos
-        /// </summary>
-        public void SetDelay5Seconds()
-        {
-            SetDelay(5, "5s", "5 segundos de delay");
-        }
-
-        /// <summary>
-        /// Establece delay de 10 segundos
-        /// </summary>
-        public void SetDelay10Seconds()
-        {
-            SetDelay(10, "10s", "10 segundos de delay");
-        }
-
-        /// <summary>
-        /// Establece el delay y actualiza la UI
-        /// </summary>
-        private void SetDelay(int seconds, string text, string tooltip)
-        {
             _delaySeconds = seconds;
-            UpdateDelayButton(text, tooltip);
+            UpdateDelayButton($"{seconds}s", tooltip);
             DelayChanged?.Invoke(this, seconds);
         }
 
@@ -84,6 +58,9 @@ namespace SnipShot.Helpers.UI
         {
             _delayOptionText.Text = text;
             ToolTipService.SetToolTip(_delayOptionsButton, tooltip);
+            // El botón muestra el número sin unidades. Sin esto el lector de pantalla
+            // anunciaría el valor inicial del XAML en vez del delay activo.
+            AutomationProperties.SetName(_delayOptionsButton, tooltip);
         }
     }
 }

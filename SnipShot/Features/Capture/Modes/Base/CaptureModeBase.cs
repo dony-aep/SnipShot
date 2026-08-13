@@ -5,6 +5,7 @@ using Windows.Graphics;
 using Windows.Graphics.Imaging;
 using SnipShot.Models;
 using WinRT.Interop;
+using static SnipShot.Models.NativeMethods;
 
 namespace SnipShot.Features.Capture.Modes.Base
 {
@@ -194,7 +195,5 @@ namespace SnipShot.Features.Capture.Modes.Base
             return IntPtr.Zero;
         }
 
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern IntPtr GetActiveWindow();
     }
 }

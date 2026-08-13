@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "skills": {
+    "dotnet-aot-compat": {
+      "source": "dotnet/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/dotnet-upgrade/skills/dotnet-aot-compat/SKILL.md",
+      "computedHash": "71e462a0382d3d07a858d466e8465a2faa62dc2bf7526e7b9928db13b9961602"
+    },
+    "dotnet-pinvoke": {
+      "source": "dotnet/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/dotnet-advanced/skills/dotnet-pinvoke/SKILL.md",
+      "computedHash": "1a1b4ac063392df8e140363237e210ba4f7395561a181669df40a681571b0ffe"
+    },
+    "winui-code-review": {
+      "source": "microsoft/win-dev-skills",
+      "sourceType": "github",
+      "skillPath": "plugins/winui/skills/winui-code-review/SKILL.md",
+      "computedHash": "b1f78bf281f2da38ee44c25d3bbe573e52a2eeb8c07947a40feeebfacfbc35e6"
+    },
+    "winui-design": {
+      "source": "microsoft/win-dev-skills",
+      "sourceType": "github",
+      "skillPath": "plugins/winui/skills/winui-design/SKILL.md",
+      "computedHash": "d6c1daeecb3cd47af2862f8d6e817fd6fef8438c6dd82b7cda1bff406c763582"
+    },
+    "winui-packaging": {
+      "source": "microsoft/win-dev-skills",
+      "sourceType": "github",
+      "skillPath": "plugins/winui/skills/winui-packaging/SKILL.md",
+      "computedHash": "2773d7b1dc01c1c3b4cdb949045ea7d0dea59125b8f245945b04767cf5da87b1"
+    },
+    "winui-ui-testing": {
+      "source": "microsoft/win-dev-skills",
+      "sourceType": "github",
+      "skillPath": "plugins/winui/skills/winui-ui-testing/SKILL.md",
+      "computedHash": "9eb7a30118a190eb3c9ca346291df516b80ef235ed91117a08c5f4e821ca2517"
+    }
+  }
+}

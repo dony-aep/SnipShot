@@ -205,7 +205,7 @@
                                         <ThemeShadow/>
                                 </Border.Shadow>
                                 <StackPanel Orientation="Horizontal" Spacing="4">
-                                        <SplitButton x:Name="ConfirmButton"
+                                        <SplitButton x:Name="ConfirmButton" AutomationProperties.AutomationId="ConfirmButton"
                                                         Click="ConfirmButton_Click"
                                                         Padding="10,6"
                                                         CornerRadius="4">
@@ -238,7 +238,7 @@
                                         </SplitButton>
                                         
                                         <!-- Botón de Formas -->
-                                        <Button x:Name="ShapesButton"
+                                        <Button x:Name="ShapesButton" AutomationProperties.AutomationId="ShapesButton" AutomationProperties.Name="Formas"
                                             Click="ShapesButton_Click"
                                             Background="Transparent"
                                             BorderThickness="0"
@@ -249,7 +249,7 @@
                                         </Button>
                                         
                                         <!-- Botón Ballpoint Pen -->
-                                        <Button x:Name="BallpointPenButton"
+                                        <Button x:Name="BallpointPenButton" AutomationProperties.AutomationId="BallpointPenButton" AutomationProperties.Name="Bolígrafo"
                                             Click="BallpointPenButton_Click"
                                             RightTapped="BallpointPenButton_RightTapped"
                                             Background="Transparent"
@@ -261,7 +261,7 @@
                                         </Button>
                                         
                                         <!-- Botón Highlighter -->
-                                        <Button x:Name="HighlighterButton"
+                                        <Button x:Name="HighlighterButton" AutomationProperties.AutomationId="HighlighterButton" AutomationProperties.Name="Resaltador"
                                             Click="HighlighterButton_Click"
                                             RightTapped="HighlighterButton_RightTapped"
                                             Background="Transparent"
@@ -273,7 +273,7 @@
                                         </Button>
                                         
                                         <!-- Boton Borrador -->
-                                        <Button x:Name="EraserButton"
+                                        <Button x:Name="EraserButton" AutomationProperties.AutomationId="EraserButton" AutomationProperties.Name="Borrador"
                                                 Click="EraserButton_Click"
                                                 RightTapped="EraserButton_RightTapped"
                                                 Background="Transparent"
@@ -285,7 +285,7 @@
                                         </Button>
                                         
                                         <!-- Botón Emoji -->
-                                        <Button x:Name="EmojiButton"
+                                        <Button x:Name="EmojiButton" AutomationProperties.AutomationId="EmojiButton" AutomationProperties.Name="Emoji"
                                             Click="EmojiButton_Click"
                                             Background="Transparent"
                                             BorderThickness="0"
@@ -296,7 +296,7 @@
                                         </Button>
                                         
                                         <!-- Botón Texto -->
-                                        <Button x:Name="TextButton"
+                                        <Button x:Name="TextButton" AutomationProperties.AutomationId="TextButton" AutomationProperties.Name="Texto"
                                             Click="TextButton_Click"
                                             Background="Transparent"
                                             BorderThickness="0"
@@ -310,7 +310,7 @@
                                                 Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
                                         
                                         <!-- Botón Undo -->
-                                        <Button x:Name="UndoButton"
+                                        <Button x:Name="UndoButton" AutomationProperties.AutomationId="UndoButton" AutomationProperties.Name="Deshacer (Ctrl+Z)"
                                                 Click="UndoButton_Click"
                                                 Background="Transparent"
                                                 BorderThickness="0"
@@ -322,7 +322,7 @@
                                         </Button>
                                         
                                         <!-- Botón Redo -->
-                                        <Button x:Name="RedoButton"
+                                        <Button x:Name="RedoButton" AutomationProperties.AutomationId="RedoButton" AutomationProperties.Name="Rehacer (Ctrl+Y)"
                                                 Click="RedoButton_Click"
                                                 Background="Transparent"
                                                 BorderThickness="0"
@@ -336,13 +336,15 @@
                                         <Border Width="1"
                                                 Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
                                         
-                                        <Button x:Name="CancelButton"
+                                        <!-- Sin ToolTip a propósito: saltaba encima del área de captura
+                                             al pasar el ratón por la barra. El AutomationProperties.Name
+                                             se mantiene para que el lector de pantalla lo siga anunciando. -->
+                                        <Button x:Name="CancelButton" AutomationProperties.AutomationId="CancelButton" AutomationProperties.Name="Descartar Captura (Esc)"
                                                         Click="CancelButton_Click"
                                                         Background="Transparent"
                                                         BorderThickness="0"
                                                         Padding="10"
-                                                        CornerRadius="4"
-                                                        ToolTipService.ToolTip="Descartar Captura (Esc)">
+                                                        CornerRadius="4">
                                                 <FontIcon Glyph="&#xE74D;" FontSize="16"/>
                                         </Button>
                                 </StackPanel>
@@ -486,7 +488,7 @@
                                 <!-- Controles de formato -->
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                 <!-- Selector de Fuente -->
-                                <ComboBox x:Name="FontFamilyComboBox"
+                                <ComboBox x:Name="FontFamilyComboBox" AutomationProperties.AutomationId="FontFamilyComboBox" AutomationProperties.Name="Fuente"
                                           Width="140"
                                           Height="36"
                                           VerticalAlignment="Center"
@@ -504,7 +506,7 @@
                                 </ComboBox>
 
                                 <!-- Selector de Tamaño (Editable) -->
-                                <ComboBox x:Name="FontSizeComboBox"
+                                <ComboBox x:Name="FontSizeComboBox" AutomationProperties.AutomationId="FontSizeComboBox" AutomationProperties.Name="Tamaño de fuente"
                                           IsEditable="True"
                                           Width="75"
                                           Height="36"
@@ -536,7 +538,7 @@
                                         Margin="4,6"/>
 
                                 <!-- Estilos de texto -->
-                                <ToggleButton x:Name="BoldToggle"
+                                <ToggleButton x:Name="BoldToggle" AutomationProperties.AutomationId="BoldToggle" AutomationProperties.Name="Negrita (Ctrl+B)"
                                               Click="BoldToggle_Click"
                                               Width="36" Height="36"
                                               Padding="0"
@@ -544,7 +546,7 @@
                                               ToolTipService.ToolTip="Negrita (Ctrl+B)">
                                     <FontIcon Glyph="&#xE8DD;" FontSize="14"/>
                                 </ToggleButton>
-                                <ToggleButton x:Name="ItalicToggle"
+                                <ToggleButton x:Name="ItalicToggle" AutomationProperties.AutomationId="ItalicToggle" AutomationProperties.Name="Cursiva (Ctrl+I)"
                                               Click="ItalicToggle_Click"
                                               Width="36" Height="36"
                                               Padding="0"
@@ -552,7 +554,7 @@
                                               ToolTipService.ToolTip="Cursiva (Ctrl+I)">
                                     <FontIcon Glyph="&#xE8DB;" FontSize="14"/>
                                 </ToggleButton>
-                                <ToggleButton x:Name="UnderlineToggle"
+                                <ToggleButton x:Name="UnderlineToggle" AutomationProperties.AutomationId="UnderlineToggle" AutomationProperties.Name="Subrayado (Ctrl+U)"
                                               Click="UnderlineToggle_Click"
                                               Width="36" Height="36"
                                               Padding="0"
@@ -560,7 +562,7 @@
                                               ToolTipService.ToolTip="Subrayado (Ctrl+U)">
                                     <FontIcon Glyph="&#xE8DC;" FontSize="14"/>
                                 </ToggleButton>
-                                <ToggleButton x:Name="StrikethroughToggle"
+                                <ToggleButton x:Name="StrikethroughToggle" AutomationProperties.AutomationId="StrikethroughToggle" AutomationProperties.Name="Tachado"
                                               Click="StrikethroughToggle_Click"
                                               Width="36" Height="36"
                                               Padding="0"
@@ -574,7 +576,7 @@
                                         Margin="4,6"/>
 
                                 <!-- Botón Color de Texto -->
-                                <Button x:Name="TextColorButton"
+                                <Button x:Name="TextColorButton" AutomationProperties.AutomationId="TextColorButton" AutomationProperties.Name="Color del texto"
                                         Click="TextColorButton_Click"
                                         Width="36" Height="36"
                                         Padding="0"
@@ -595,7 +597,7 @@
                                 </Button>
 
                                 <!-- Botón Color de Resaltado -->
-                                <Button x:Name="TextHighlightButton"
+                                <Button x:Name="TextHighlightButton" AutomationProperties.AutomationId="TextHighlightButton" AutomationProperties.Name="Color de resaltado"
                                         Click="TextHighlightButton_Click"
                                         Width="36" Height="36"
                                         Padding="0"
@@ -688,48 +690,63 @@
                                 PointerPressed="FloatingMenu_PointerPressed">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <!-- Menú desplegable de modos -->
-                                <Button x:Name="CaptureModeButton"
+                                <Button x:Name="CaptureModeButton" AutomationProperties.AutomationId="CaptureModeButton" AutomationProperties.Name="Modo de captura"
                                        ToolTipService.ToolTip="Modo de captura"
+                                       Click="CaptureModeButton_Click"
                                        MinWidth="68" Height="34" Padding="10,6">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <FontIcon x:Name="CaptureModeIcon" Glyph="&#xF407;" FontSize="16" Foreground="{ThemeResource OverlayTextBrush}"/>
                                         <FontIcon Glyph="&#xE70D;" FontSize="11" Foreground="{ThemeResource OverlayTextBrush}"/>
                                     </StackPanel>
-                                    <Button.Flyout>
-                                        <MenuFlyout Placement="Bottom">
-                                            <MenuFlyoutItem Text="Captura Rectangular" 
-                                                          Click="FloatingRectangular_Click">
-                                                <MenuFlyoutItem.Icon>
-                                                    <FontIcon Glyph="&#xF407;"/>
-                                                </MenuFlyoutItem.Icon>
-                                            </MenuFlyoutItem>
-                                            
-                                            <MenuFlyoutItem Text="Captura de Ventana" 
-                                                          Click="FloatingWindow_Click">
-                                                <MenuFlyoutItem.Icon>
-                                                    <FontIcon Glyph="&#xF7ED;"/>
-                                                </MenuFlyoutItem.Icon>
-                                            </MenuFlyoutItem>
-                                            
-                                            <MenuFlyoutItem Text="Pantalla Completa" 
-                                                          Click="FloatingFullScreen_Click">
-                                                <MenuFlyoutItem.Icon>
-                                                    <FontIcon Glyph="&#xE9A6;"/>
-                                                </MenuFlyoutItem.Icon>
-                                            </MenuFlyoutItem>
-                                            
-                                            <MenuFlyoutItem Text="Forma Libre" 
-                                                          Click="FloatingFreeForm_Click">
-                                                <MenuFlyoutItem.Icon>
-                                                    <FontIcon Glyph="&#xF408;"/>
-                                                </MenuFlyoutItem.Icon>
-                                            </MenuFlyoutItem>
-                                        </MenuFlyout>
-                                    </Button.Flyout>
+                                    <FlyoutBase.AttachedFlyout>
+                                        <Flyout Placement="BottomEdgeAlignedLeft">
+                                            <Flyout.FlyoutPresenterStyle>
+                                                <Style TargetType="FlyoutPresenter" BasedOn="{StaticResource DefaultFlyoutPresenterStyle}">
+                                                    <Setter Property="Padding" Value="4"/>
+                                                    <Setter Property="MinWidth" Value="0"/>
+                                                </Style>
+                                            </Flyout.FlyoutPresenterStyle>
+                                            <!-- SelectedIndex apunta al modo de este overlay, así que el
+                                                 SelectionChanged que dispara al cargar cae en la rama no-op -->
+                                            <ListView x:Name="CaptureModeList" AutomationProperties.AutomationId="CaptureModeList"
+                                                      SelectedIndex="0"
+                                                      IsItemClickEnabled="True"
+                                                      ItemClick="CaptureModeList_ItemClick"
+                                                      SelectionChanged="CaptureModeList_SelectionChanged">
+                                                <ListViewItem Tag="Rectangular">
+                                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                                        <FontIcon Glyph="&#xF407;" FontSize="16"/>
+                                                        <TextBlock Text="Rectangular"/>
+                                                    </StackPanel>
+                                                </ListViewItem>
+
+                                                <ListViewItem Tag="Ventana">
+                                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                                        <FontIcon Glyph="&#xF7ED;" FontSize="16"/>
+                                                        <TextBlock Text="Ventana"/>
+                                                    </StackPanel>
+                                                </ListViewItem>
+
+                                                <ListViewItem Tag="Pantalla Completa">
+                                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                                        <FontIcon Glyph="&#xE9A6;" FontSize="16"/>
+                                                        <TextBlock Text="Pantalla Completa"/>
+                                                    </StackPanel>
+                                                </ListViewItem>
+
+                                                <ListViewItem Tag="Forma Libre">
+                                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                                        <FontIcon Glyph="&#xF408;" FontSize="16"/>
+                                                        <TextBlock Text="Forma Libre"/>
+                                                    </StackPanel>
+                                                </ListViewItem>
+                                            </ListView>
+                                        </Flyout>
+                                    </FlyoutBase.AttachedFlyout>
                                 </Button>
                                 
                                 <!-- Botón Color Picker -->
-                                <Button x:Name="ColorPickerButton"
+                                <Button x:Name="ColorPickerButton" AutomationProperties.AutomationId="ColorPickerButton" AutomationProperties.Name="Selector de Color"
                                        Click="ColorPickerButton_Click"
                                        ToolTipService.ToolTip="Selector de Color"
                                        Width="34" Height="34" Padding="0">
@@ -741,7 +758,7 @@
                                        Margin="3,7"/>
                                 
                                 <!-- Botón cerrar -->
-                                <Button x:Name="FloatingCloseButton"
+                                <Button x:Name="FloatingCloseButton" AutomationProperties.AutomationId="FloatingCloseButton" AutomationProperties.Name="Cerrar"
                                        Click="FloatingClose_Click"
                                        ToolTipService.ToolTip="Cerrar"
                                        Width="34" Height="34" Padding="0">

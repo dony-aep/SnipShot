@@ -8,33 +8,81 @@ using System.Collections.Generic;
 namespace SnipShot.Features.Capture.Annotations.Managers
 {
     /// <summary>
-    /// Represents an action that can be undone and redone
+    /// Representa una acción que se puede deshacer y rehacer
     /// </summary>
     public interface IHistoryAction
     {
         /// <summary>
-        /// Undoes this action
+        /// Deshace esta acción
         /// </summary>
         void Undo();
 
         /// <summary>
-        /// Redoes this action
+        /// Rehace esta acción
         /// </summary>
         void Redo();
 
         /// <summary>
-        /// Gets a description of this action
+        /// Obtiene una descripción de esta acción
         /// </summary>
         string Description { get; }
     }
 
     /// <summary>
-    /// History action for adding a path to the canvas
+    /// Reinserción de anotaciones en el canvas conservando su orden Z.
+    /// </summary>
+    /// <remarks>
+    /// El orden de <see cref="Canvas.Children"/> es el orden de pintado: quien está antes
+    /// queda debajo. Reinsertar con Add() manda el elemento al final, así que deshacer un
+    /// borrado lo devolvería encima de todo en vez de a su sitio. Por eso se guarda el
+    /// índice que ocupaba y se reinserta ahí.
+    /// </remarks>
+    internal static class CanvasOrder
+    {
+        /// <summary>
+        /// Quita el elemento del canvas y devuelve el índice que ocupaba, o -1 si no estaba.
+        /// </summary>
+        public static int RemoveTracking(Canvas canvas, UIElement element)
+        {
+            int index = canvas.Children.IndexOf(element);
+            if (index >= 0)
+            {
+                canvas.Children.RemoveAt(index);
+            }
+
+            return index;
+        }
+
+        /// <summary>
+        /// Reinserta el elemento en su índice original. Si ese índice ya no es válido
+        /// —hay menos hijos que antes— se añade al final, que es lo mejor disponible.
+        /// </summary>
+        public static void Restore(Canvas canvas, UIElement element, int index)
+        {
+            if (canvas.Children.Contains(element))
+            {
+                return;
+            }
+
+            if (index >= 0 && index <= canvas.Children.Count)
+            {
+                canvas.Children.Insert(index, element);
+            }
+            else
+            {
+                canvas.Children.Add(element);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Acción de historial para añadir un path al canvas
     /// </summary>
     public class AddPathAction : IHistoryAction
     {
         private readonly Canvas _canvas;
         private readonly Path _path;
+        private int _index = -1;
 
         public string Description => "Add annotation";
 
@@ -46,61 +94,56 @@ namespace SnipShot.Features.Capture.Annotations.Managers
 
         public void Undo()
         {
-            if (_canvas.Children.Contains(_path))
-            {
-                _canvas.Children.Remove(_path);
-            }
+            _index = CanvasOrder.RemoveTracking(_canvas, _path);
         }
 
         public void Redo()
         {
-            if (!_canvas.Children.Contains(_path))
-            {
-                _canvas.Children.Add(_path);
-            }
+            CanvasOrder.Restore(_canvas, _path, _index);
         }
     }
 
     /// <summary>
-    /// History action for removing a path from the canvas
+    /// Acción de historial para quitar un path del canvas
     /// </summary>
     public class RemovePathAction : IHistoryAction
     {
         private readonly Canvas _canvas;
         private readonly Path _path;
+        private int _index;
 
         public string Description => "Remove annotation";
 
-        public RemovePathAction(Canvas canvas, Path path)
+        /// <param name="index">
+        /// Índice que ocupaba el path antes de quitarlo. Los llamadores registran la acción
+        /// después de haberlo quitado, así que hay que capturarlo antes y pasarlo aquí.
+        /// </param>
+        public RemovePathAction(Canvas canvas, Path path, int index = -1)
         {
             _canvas = canvas;
             _path = path;
+            _index = index;
         }
 
         public void Undo()
         {
-            if (!_canvas.Children.Contains(_path))
-            {
-                _canvas.Children.Add(_path);
-            }
+            CanvasOrder.Restore(_canvas, _path, _index);
         }
 
         public void Redo()
         {
-            if (_canvas.Children.Contains(_path))
-            {
-                _canvas.Children.Remove(_path);
-            }
+            _index = CanvasOrder.RemoveTracking(_canvas, _path);
         }
     }
 
     /// <summary>
-    /// History action for adding a generic UIElement (like text) to the canvas
+    /// Acción de historial para añadir un UIElement genérico (por ejemplo, texto) al canvas
     /// </summary>
     public class AddElementAction : IHistoryAction
     {
         private readonly Canvas _canvas;
         private readonly UIElement _element;
+        private int _index = -1;
 
         public string Description => "Add element";
 
@@ -112,138 +155,134 @@ namespace SnipShot.Features.Capture.Annotations.Managers
 
         public void Undo()
         {
-            if (_canvas.Children.Contains(_element))
-            {
-                _canvas.Children.Remove(_element);
-            }
+            _index = CanvasOrder.RemoveTracking(_canvas, _element);
         }
 
         public void Redo()
         {
-            if (!_canvas.Children.Contains(_element))
-            {
-                _canvas.Children.Add(_element);
-            }
+            CanvasOrder.Restore(_canvas, _element, _index);
         }
     }
 
     /// <summary>
-    /// History action for removing a generic UIElement from the canvas
+    /// Acción de historial para quitar un UIElement genérico del canvas
     /// </summary>
     public class RemoveElementAction : IHistoryAction
     {
         private readonly Canvas _canvas;
         private readonly UIElement _element;
+        private int _index;
 
         public string Description => "Remove element";
 
-        public RemoveElementAction(Canvas canvas, UIElement element)
+        /// <param name="index">Índice que ocupaba el elemento antes de quitarlo.</param>
+        public RemoveElementAction(Canvas canvas, UIElement element, int index = -1)
         {
             _canvas = canvas;
             _element = element;
+            _index = index;
         }
 
         public void Undo()
         {
-            if (!_canvas.Children.Contains(_element))
-            {
-                _canvas.Children.Add(_element);
-            }
+            CanvasOrder.Restore(_canvas, _element, _index);
         }
 
         public void Redo()
         {
-            if (_canvas.Children.Contains(_element))
-            {
-                _canvas.Children.Remove(_element);
-            }
+            _index = CanvasOrder.RemoveTracking(_canvas, _element);
         }
     }
 
     /// <summary>
-    /// History action for moving a path
+    /// Acción de historial para mover un path
     /// </summary>
     public class MovePathAction : IHistoryAction
     {
         private readonly Path _path;
         private readonly Models.ShapeData? _originalData;
         private readonly Models.ShapeData? _newData;
+        private readonly Action<Path, Models.ShapeData>? _updateGeometry;
 
         public string Description => "Move annotation";
 
-        public MovePathAction(Path path, Models.ShapeData? originalData, Models.ShapeData? newData)
+        /// <param name="updateGeometry">
+        /// Redibuja el path a partir de sus datos. Sin esto, deshacer solo cambia el
+        /// ShapeData y la forma se queda pintada donde estaba.
+        /// </param>
+        public MovePathAction(
+            Path path,
+            Models.ShapeData? originalData,
+            Models.ShapeData? newData,
+            Action<Path, Models.ShapeData>? updateGeometry = null)
         {
             _path = path;
             _originalData = originalData != null ? originalData.Clone() : null;
             _newData = newData != null ? newData.Clone() : null;
+            _updateGeometry = updateGeometry;
         }
 
-        public void Undo()
+        public void Undo() => Apply(_originalData);
+
+        public void Redo() => Apply(_newData);
+
+        private void Apply(Models.ShapeData? data)
         {
-            if (_originalData != null && _path.Tag is Models.ShapeData currentData)
+            if (data == null || _path.Tag is not Models.ShapeData currentData)
             {
-                currentData.StartPoint = _originalData.StartPoint;
-                currentData.EndPoint = _originalData.EndPoint;
-                UpdatePathGeometry();
+                return;
             }
-        }
 
-        public void Redo()
-        {
-            if (_newData != null && _path.Tag is Models.ShapeData currentData)
-            {
-                currentData.StartPoint = _newData.StartPoint;
-                currentData.EndPoint = _newData.EndPoint;
-                UpdatePathGeometry();
-            }
-        }
-
-        private void UpdatePathGeometry()
-        {
-            // The geometry update will be handled by the ShapeManipulationManager
-            // when it receives notification of data changes
+            currentData.StartPoint = data.StartPoint;
+            currentData.EndPoint = data.EndPoint;
+            _updateGeometry?.Invoke(_path, currentData);
         }
     }
 
     /// <summary>
-    /// History action for resizing a path
+    /// Acción de historial para redimensionar un path
     /// </summary>
     public class ResizePathAction : IHistoryAction
     {
         private readonly Path _path;
         private readonly Models.ShapeData? _originalData;
         private readonly Models.ShapeData? _newData;
+        private readonly Action<Path, Models.ShapeData>? _updateGeometry;
 
         public string Description => "Resize annotation";
 
-        public ResizePathAction(Path path, Models.ShapeData? originalData, Models.ShapeData? newData)
+        /// <param name="updateGeometry">Redibuja el path a partir de sus datos.</param>
+        public ResizePathAction(
+            Path path,
+            Models.ShapeData? originalData,
+            Models.ShapeData? newData,
+            Action<Path, Models.ShapeData>? updateGeometry = null)
         {
             _path = path;
             _originalData = originalData != null ? originalData.Clone() : null;
             _newData = newData != null ? newData.Clone() : null;
+            _updateGeometry = updateGeometry;
         }
 
-        public void Undo()
-        {
-            if (_originalData != null && _path.Tag is Models.ShapeData currentData)
-            {
-                currentData.StartPoint = _originalData.StartPoint;
-                currentData.EndPoint = _originalData.EndPoint;
-            }
-        }
+        public void Undo() => Apply(_originalData);
 
-        public void Redo()
+        public void Redo() => Apply(_newData);
+
+        private void Apply(Models.ShapeData? data)
         {
-            if (_newData != null && _path.Tag is Models.ShapeData currentData)
+            if (data == null || _path.Tag is not Models.ShapeData currentData)
             {
-                currentData.StartPoint = _newData.StartPoint;
-                currentData.EndPoint = _newData.EndPoint;
+                return;
             }
+
+            currentData.StartPoint = data.StartPoint;
+            currentData.EndPoint = data.EndPoint;
+            _updateGeometry?.Invoke(_path, currentData);
         }
     }
 
     /// <summary>
-    /// History action for modifying a text element (move/resize/style)
+    /// Acción de historial para modificar un texto (mover, redimensionar o cambiar estilo)
     /// </summary>
     public class ModifyTextAction : IHistoryAction
     {
@@ -264,7 +303,6 @@ namespace SnipShot.Features.Capture.Annotations.Managers
         {
             if (_textElement.Tag is Models.TextData currentData)
             {
-                // Restore original data
                 currentData.Text = _originalData.Text;
                 currentData.FontFamily = _originalData.FontFamily;
                 currentData.FontSize = _originalData.FontSize;
@@ -278,7 +316,6 @@ namespace SnipShot.Features.Capture.Annotations.Managers
                 currentData.Width = _originalData.Width;
                 currentData.Height = _originalData.Height;
 
-                // Update visual position
                 Canvas.SetLeft(_textElement, _originalData.Position.X);
                 Canvas.SetTop(_textElement, _originalData.Position.Y);
                 _textElement.Width = _originalData.Width;
@@ -290,7 +327,6 @@ namespace SnipShot.Features.Capture.Annotations.Managers
         {
             if (_textElement.Tag is Models.TextData currentData)
             {
-                // Apply new data
                 currentData.Text = _newData.Text;
                 currentData.FontFamily = _newData.FontFamily;
                 currentData.FontSize = _newData.FontSize;
@@ -304,7 +340,6 @@ namespace SnipShot.Features.Capture.Annotations.Managers
                 currentData.Width = _newData.Width;
                 currentData.Height = _newData.Height;
 
-                // Update visual position
                 Canvas.SetLeft(_textElement, _newData.Position.X);
                 Canvas.SetTop(_textElement, _newData.Position.Y);
                 _textElement.Width = _newData.Width;
@@ -314,7 +349,7 @@ namespace SnipShot.Features.Capture.Annotations.Managers
     }
 
     /// <summary>
-    /// History action for modifying an emoji element (move/resize)
+    /// Acción de historial para modificar un emoji (mover o redimensionar)
     /// </summary>
     public class ModifyEmojiAction : IHistoryAction
     {
@@ -335,7 +370,6 @@ namespace SnipShot.Features.Capture.Annotations.Managers
         {
             if (_emojiElement.Tag is Models.EmojiData currentData)
             {
-                // Restore original data
                 currentData.Emoji = _originalData.Emoji;
                 currentData.FontSize = _originalData.FontSize;
                 currentData.Position = _originalData.Position;
@@ -343,16 +377,13 @@ namespace SnipShot.Features.Capture.Annotations.Managers
                 currentData.Height = _originalData.Height;
                 currentData.RotationAngle = _originalData.RotationAngle;
 
-                // Update visual position
                 Canvas.SetLeft(_emojiElement, _originalData.Position.X);
                 Canvas.SetTop(_emojiElement, _originalData.Position.Y);
                 _emojiElement.Width = _originalData.Width;
                 _emojiElement.Height = _originalData.Height;
 
-                // Update rotation
                 ApplyRotation(_emojiElement, _originalData.RotationAngle);
 
-                // Update TextBlock inside
                 if (_emojiElement.Children.Count > 0 && _emojiElement.Children[0] is TextBlock textBlock)
                 {
                     textBlock.FontSize = _originalData.FontSize;
@@ -365,7 +396,6 @@ namespace SnipShot.Features.Capture.Annotations.Managers
         {
             if (_emojiElement.Tag is Models.EmojiData currentData)
             {
-                // Apply new data
                 currentData.Emoji = _newData.Emoji;
                 currentData.FontSize = _newData.FontSize;
                 currentData.Position = _newData.Position;
@@ -373,16 +403,13 @@ namespace SnipShot.Features.Capture.Annotations.Managers
                 currentData.Height = _newData.Height;
                 currentData.RotationAngle = _newData.RotationAngle;
 
-                // Update visual position
                 Canvas.SetLeft(_emojiElement, _newData.Position.X);
                 Canvas.SetTop(_emojiElement, _newData.Position.Y);
                 _emojiElement.Width = _newData.Width;
                 _emojiElement.Height = _newData.Height;
 
-                // Update rotation
                 ApplyRotation(_emojiElement, _newData.RotationAngle);
 
-                // Update TextBlock inside
                 if (_emojiElement.Children.Count > 0 && _emojiElement.Children[0] is TextBlock textBlock)
                 {
                     textBlock.FontSize = _newData.FontSize;
@@ -413,7 +440,7 @@ namespace SnipShot.Features.Capture.Annotations.Managers
     }
 
     /// <summary>
-    /// Manages undo/redo history for annotations
+    /// Gestiona el historial de deshacer y rehacer de las anotaciones
     /// </summary>
     public class AnnotationHistoryManager
     {
@@ -423,35 +450,35 @@ namespace SnipShot.Features.Capture.Annotations.Managers
         private readonly int _maxHistorySize;
 
         /// <summary>
-        /// Event raised when the history state changes
+        /// Evento que se dispara cuando cambia el estado del historial
         /// </summary>
         public event EventHandler? HistoryChanged;
 
         /// <summary>
-        /// Gets whether there are actions to undo
+        /// Obtiene si hay acciones que deshacer
         /// </summary>
         public bool CanUndo => _undoStack.Count > 0;
 
         /// <summary>
-        /// Gets whether there are actions to redo
+        /// Obtiene si hay acciones que rehacer
         /// </summary>
         public bool CanRedo => _redoStack.Count > 0;
 
         /// <summary>
-        /// Gets the number of actions in the undo stack
+        /// Obtiene el número de acciones en la pila de deshacer
         /// </summary>
         public int UndoCount => _undoStack.Count;
 
         /// <summary>
-        /// Gets the number of actions in the redo stack
+        /// Obtiene el número de acciones en la pila de rehacer
         /// </summary>
         public int RedoCount => _redoStack.Count;
 
         /// <summary>
-        /// Creates a new AnnotationHistoryManager
+        /// Crea un nuevo AnnotationHistoryManager
         /// </summary>
-        /// <param name="canvas">The canvas containing annotations</param>
-        /// <param name="maxHistorySize">Maximum number of actions to keep in history</param>
+        /// <param name="canvas">Canvas que contiene las anotaciones</param>
+        /// <param name="maxHistorySize">Número máximo de acciones que se guardan en el historial</param>
         public AnnotationHistoryManager(Canvas canvas, int maxHistorySize = 100)
         {
             _canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
@@ -461,15 +488,14 @@ namespace SnipShot.Features.Capture.Annotations.Managers
         }
 
         /// <summary>
-        /// Records an action in the history
+        /// Registra una acción en el historial
         /// </summary>
-        /// <param name="action">The action to record</param>
+        /// <param name="action">Acción que se registra</param>
         public void RecordAction(IHistoryAction action)
         {
             _undoStack.Push(action);
-            _redoStack.Clear(); // Clear redo stack when new action is recorded
+            _redoStack.Clear(); // Registrar algo nuevo invalida la rama que hubiera para rehacer
 
-            // Trim history if exceeds max size
             if (_undoStack.Count > _maxHistorySize)
             {
                 TrimHistory();
@@ -479,7 +505,7 @@ namespace SnipShot.Features.Capture.Annotations.Managers
         }
 
         /// <summary>
-        /// Records adding a path to the canvas
+        /// Registra que se añadió un path al canvas
         /// </summary>
         public void RecordPathAdded(Path path)
         {
@@ -487,7 +513,7 @@ namespace SnipShot.Features.Capture.Annotations.Managers
         }
 
         /// <summary>
-        /// Records adding a generic UIElement (like text) to the canvas
+        /// Registra que se añadió un UIElement genérico (por ejemplo, texto) al canvas
         /// </summary>
         public void RecordElementAdded(UIElement element)
         {
@@ -495,39 +521,54 @@ namespace SnipShot.Features.Capture.Annotations.Managers
         }
 
         /// <summary>
-        /// Records removing a path from the canvas
+        /// Registra que se quitó un path del canvas
         /// </summary>
-        public void RecordPathRemoved(Path path)
+        /// <param name="index">
+        /// Índice que ocupaba en el canvas antes de quitarlo, para poder devolverlo a su
+        /// orden Z al deshacer. Omitirlo hace que reaparezca encima del resto.
+        /// </param>
+        public void RecordPathRemoved(Path path, int index = -1)
         {
-            RecordAction(new RemovePathAction(_canvas, path));
+            RecordAction(new RemovePathAction(_canvas, path, index));
         }
 
         /// <summary>
-        /// Records removing a generic UIElement from the canvas
+        /// Registra que se quitó un UIElement genérico del canvas
         /// </summary>
-        public void RecordElementRemoved(UIElement element)
+        /// <param name="index">Índice que ocupaba en el canvas antes de quitarlo.</param>
+        public void RecordElementRemoved(UIElement element, int index = -1)
         {
-            RecordAction(new RemoveElementAction(_canvas, element));
+            RecordAction(new RemoveElementAction(_canvas, element, index));
         }
 
         /// <summary>
-        /// Records moving a path
+        /// Registra que se movió un path
         /// </summary>
-        public void RecordPathMoved(Path path, Models.ShapeData? originalData, Models.ShapeData? newData)
+        /// <param name="updateGeometry">Redibuja el path tras restaurar sus datos.</param>
+        public void RecordPathMoved(
+            Path path,
+            Models.ShapeData? originalData,
+            Models.ShapeData? newData,
+            Action<Path, Models.ShapeData>? updateGeometry = null)
         {
-            RecordAction(new MovePathAction(path, originalData, newData));
+            RecordAction(new MovePathAction(path, originalData, newData, updateGeometry));
         }
 
         /// <summary>
-        /// Records resizing a path
+        /// Registra que se redimensionó un path
         /// </summary>
-        public void RecordPathResized(Path path, Models.ShapeData? originalData, Models.ShapeData? newData)
+        /// <param name="updateGeometry">Redibuja el path tras restaurar sus datos.</param>
+        public void RecordPathResized(
+            Path path,
+            Models.ShapeData? originalData,
+            Models.ShapeData? newData,
+            Action<Path, Models.ShapeData>? updateGeometry = null)
         {
-            RecordAction(new ResizePathAction(path, originalData, newData));
+            RecordAction(new ResizePathAction(path, originalData, newData, updateGeometry));
         }
 
         /// <summary>
-        /// Records modifying a text element (move, resize, or style change)
+        /// Registra que se modificó un texto (mover, redimensionar o cambiar estilo)
         /// </summary>
         public void RecordTextModified(Grid textElement, Models.TextData originalData, Models.TextData newData)
         {
@@ -535,7 +576,7 @@ namespace SnipShot.Features.Capture.Annotations.Managers
         }
 
         /// <summary>
-        /// Records modifying an emoji element (move, resize)
+        /// Registra que se modificó un emoji (mover o redimensionar)
         /// </summary>
         public void RecordEmojiModified(Grid emojiElement, Models.EmojiData originalData, Models.EmojiData newData)
         {
@@ -543,9 +584,9 @@ namespace SnipShot.Features.Capture.Annotations.Managers
         }
 
         /// <summary>
-        /// Undoes the last action
+        /// Deshace la última acción
         /// </summary>
-        /// <returns>True if an action was undone</returns>
+        /// <returns>True si se deshizo una acción</returns>
         public bool Undo()
         {
             if (!CanUndo)
@@ -560,9 +601,9 @@ namespace SnipShot.Features.Capture.Annotations.Managers
         }
 
         /// <summary>
-        /// Redoes the last undone action
+        /// Rehace la última acción deshecha
         /// </summary>
-        /// <returns>True if an action was redone</returns>
+        /// <returns>True si se rehízo una acción</returns>
         public bool Redo()
         {
             if (!CanRedo)
@@ -577,7 +618,7 @@ namespace SnipShot.Features.Capture.Annotations.Managers
         }
 
         /// <summary>
-        /// Clears all history
+        /// Vacía todo el historial
         /// </summary>
         public void ClearHistory()
         {
@@ -587,7 +628,7 @@ namespace SnipShot.Features.Capture.Annotations.Managers
         }
 
         /// <summary>
-        /// Gets the description of the next action to undo
+        /// Obtiene la descripción de la siguiente acción que se deshará
         /// </summary>
         public string? GetUndoDescription()
         {
@@ -595,7 +636,7 @@ namespace SnipShot.Features.Capture.Annotations.Managers
         }
 
         /// <summary>
-        /// Gets the description of the next action to redo
+        /// Obtiene la descripción de la siguiente acción que se rehará
         /// </summary>
         public string? GetRedoDescription()
         {
@@ -603,15 +644,16 @@ namespace SnipShot.Features.Capture.Annotations.Managers
         }
 
         /// <summary>
-        /// Trims the history to the maximum size
+        /// Recorta el historial al tamaño máximo
         /// </summary>
         private void TrimHistory()
         {
-            // Convert to array, trim, and rebuild stack
+            // Stack<T> no deja quitar por el fondo, así que hay que reconstruirla. ToArray()
+            // devuelve desde la cima hacia abajo, por lo que recorrer el array desde el índice
+            // máximo hacia atrás descarta las acciones más antiguas y conserva el orden.
             var actions = _undoStack.ToArray();
             _undoStack.Clear();
-            
-            // Push back in reverse order, skipping oldest actions
+
             for (int i = Math.Min(_maxHistorySize - 1, actions.Length - 1); i >= 0; i--)
             {
                 _undoStack.Push(actions[i]);

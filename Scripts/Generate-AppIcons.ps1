@@ -42,7 +42,7 @@ function New-SquareIcon {
     )
     
     Write-Host "  Generando: $Output ($Size x $Size)" -ForegroundColor Cyan
-    & magick convert $Source -resize "${Size}x${Size}" -gravity center -background transparent -extent "${Size}x${Size}" $Output
+    & magick $Source -resize "${Size}x${Size}" -gravity center -background transparent -extent "${Size}x${Size}" $Output
 }
 
 # Función para crear imagen con padding (para tiles anchos y splash)
@@ -61,7 +61,7 @@ function New-PaddedIcon {
     }
     
     Write-Host "  Generando: $Output ($Width x $Height, icono: $IconSize)" -ForegroundColor Cyan
-    & magick convert $Source -resize "${IconSize}x${IconSize}" -gravity center -background transparent -extent "${Width}x${Height}" $Output
+    & magick $Source -resize "${IconSize}x${IconSize}" -gravity center -background transparent -extent "${Width}x${Height}" $Output
 }
 
 # ============================================================
@@ -127,10 +127,19 @@ New-SquareIcon -Source $SourceImagePath -Output "$OutputFolderPath\Square44x44Lo
 # Target size variants (sin escala, tamaño exacto)
 New-SquareIcon -Source $SourceImagePath -Output "$OutputFolderPath\Square44x44Logo.targetsize-16.png" -Size 16
 New-SquareIcon -Source $SourceImagePath -Output "$OutputFolderPath\Square44x44Logo.targetsize-24.png" -Size 24
-New-SquareIcon -Source $SourceImagePath -Output "$OutputFolderPath\Square44x44Logo.targetsize-24_altform-unplated.png" -Size 24
 New-SquareIcon -Source $SourceImagePath -Output "$OutputFolderPath\Square44x44Logo.targetsize-32.png" -Size 32
 New-SquareIcon -Source $SourceImagePath -Output "$OutputFolderPath\Square44x44Logo.targetsize-48.png" -Size 48
 New-SquareIcon -Source $SourceImagePath -Output "$OutputFolderPath\Square44x44Logo.targetsize-256.png" -Size 256
+
+# Variantes unplated: son las que usa la barra de tareas de Windows 11, que elige el
+# tamaño según el factor de escala de CADA monitor. Hacen falta las cinco: si solo
+# existe la de 24, un monitor al 100% dibuja el icono y otro al 125% o 150% no lo
+# resuelve y lo deja en blanco.
+New-SquareIcon -Source $SourceImagePath -Output "$OutputFolderPath\Square44x44Logo.targetsize-16_altform-unplated.png" -Size 16
+New-SquareIcon -Source $SourceImagePath -Output "$OutputFolderPath\Square44x44Logo.targetsize-24_altform-unplated.png" -Size 24
+New-SquareIcon -Source $SourceImagePath -Output "$OutputFolderPath\Square44x44Logo.targetsize-32_altform-unplated.png" -Size 32
+New-SquareIcon -Source $SourceImagePath -Output "$OutputFolderPath\Square44x44Logo.targetsize-48_altform-unplated.png" -Size 48
+New-SquareIcon -Source $SourceImagePath -Output "$OutputFolderPath\Square44x44Logo.targetsize-256_altform-unplated.png" -Size 256
 
 Write-Host ""
 

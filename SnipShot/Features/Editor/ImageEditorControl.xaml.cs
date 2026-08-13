@@ -50,11 +50,33 @@ namespace SnipShot.Features.Editor
         private Point _cropDragStart;
         private string? _activeCropHandle;
         private bool _isCropping;
+
+        /// <summary>
+        /// Zoom que había antes de entrar en recorte. BeginCrop hace FitToWindow, así que sin
+        /// esto se pierde el encuadre de trabajo del usuario al cancelar.
+        /// </summary>
+        private double _zoomBeforeCrop = 1.0;
         private bool _isCropHandleDragging;
         private bool _isCropDragging;
         
         // Padding para el modo recorte (espacio para handles visibles en los bordes)
-        private const double CROP_MODE_PADDING = 24.0;
+        /// <summary>
+        /// Holgura alrededor de la imagen mientras se recorta.
+        /// </summary>
+        /// <remarks>
+        /// No es solo para que quepan los handles en los bordes: da margen para arrastrar la
+        /// imagen y trabajar cómodo en las esquinas. Como se aplica al ImageContainer, escala
+        /// con el zoom y crece el área desplazable, así que a nivel de ajuste aparecerán barras
+        /// de desplazamiento durante el recorte. Es el precio de poder mover la imagen, y el
+        /// único número que hay que tocar si se quiere más o menos holgura.
+        /// </remarks>
+        private const double CROP_MODE_PADDING = 120.0;
+
+        /// <summary>
+        /// Grosor del borde del encuadre en píxeles de pantalla, antes de compensar el zoom.
+        /// Debe coincidir con el StrokeThickness que CropSelectionRect trae del XAML.
+        /// </summary>
+        private const double CROP_BORDER_THICKNESS = 1.5;
 
         // Estado de la imagen
         private SoftwareBitmap? _currentBitmap;
@@ -206,6 +228,20 @@ namespace SnipShot.Features.Editor
 
             EditorScrollViewer.ViewChanged += EditorScrollViewer_ViewChanged;
             _lastZoomFactor = EditorScrollViewer.ZoomFactor;
+
+            // El desplazamiento con Ctrl se engancha al ScrollViewer y no al ImageContainer
+            // para que funcione también fuera del área de la imagen. Hace falta AddHandler con
+            // handledEventsToo porque el ScrollViewer marca los eventos de puntero como
+            // manejados para su propia manipulación, y con las suscripciones normales no
+            // llegarían nunca.
+            EditorScrollViewer.AddHandler(
+                UIElement.PointerPressedEvent, new PointerEventHandler(EditorScrollViewer_PointerPressed), true);
+            EditorScrollViewer.AddHandler(
+                UIElement.PointerMovedEvent, new PointerEventHandler(EditorScrollViewer_PointerMoved), true);
+            EditorScrollViewer.AddHandler(
+                UIElement.PointerReleasedEvent, new PointerEventHandler(EditorScrollViewer_PointerReleased), true);
+            EditorScrollViewer.AddHandler(
+                UIElement.PointerCaptureLostEvent, new PointerEventHandler(EditorScrollViewer_PointerCaptureLost), true);
             
             // Inicialización mínima - los managers pesados se inicializan cuando se necesitan
             // InitializeManagers();      // Diferido a EnsureManagersInitialized()
@@ -917,6 +953,8 @@ namespace SnipShot.Features.Editor
 
             if (_isCropping || !_hasImage)
             {
+                // Recoloca ademas de reescalar: las posiciones dependen del tamaño escalado.
+                UpdateCropOverlay();
                 _pendingZoomCommit = false;
                 return;
             }
@@ -1047,6 +1085,11 @@ namespace SnipShot.Features.Editor
             if (_isCropping) return;
 
             _isCropping = true;
+            _zoomBeforeCrop = EditorScrollViewer.ZoomFactor;
+
+            // La holgura se aplica antes de ajustar para que el ajuste ya vea el tamaño
+            // definitivo del contenido, en vez de recalcularse al crecer el contenedor.
+            ImageContainer.Margin = new Thickness(CROP_MODE_PADDING);
             _zoomManager?.FitToWindow();
 
             _annotationManager?.DeactivateTool();
@@ -1056,9 +1099,6 @@ namespace SnipShot.Features.Editor
             _textManipulation?.Deselect();
             _emojiManipulation?.Deselect();
             _cropBounds = new Rect(0, 0, _currentBitmap.PixelWidth, _currentBitmap.PixelHeight);
-
-            // Añadir padding al contenedor para que los handles sean visibles en los bordes
-            ImageContainer.Margin = new Thickness(CROP_MODE_PADDING);
 
             // Ocultar overlay de OCR durante el recorte
             OcrOverlayCanvas.Visibility = Visibility.Collapsed;
@@ -1091,8 +1131,10 @@ namespace SnipShot.Features.Editor
             ImageModified?.Invoke(this, EventArgs.Empty);
 
             CancelCrop();
-            
-            // Centrar la imagen recortada en el ScrollViewer
+
+            // La imagen ya no es la misma, así que el zoom anterior no se corresponde con
+            // nada: se ajusta la recortada a la ventana y se centra.
+            _zoomManager?.FitToWindow();
             CenterImageInScrollViewer();
         }
 
@@ -1118,6 +1160,13 @@ namespace SnipShot.Features.Editor
 
             // Remover el padding del modo recorte
             ImageContainer.Margin = new Thickness(0);
+
+            // Devolver el zoom que el usuario tenía antes de recortar. Si se aplicó un recorte,
+            // ApplyCropAsync lo sobrescribe después con un ajuste a la imagen nueva.
+            if (_zoomBeforeCrop > 0)
+            {
+                EditorScrollViewer.ChangeView(null, null, (float)_zoomBeforeCrop, disableAnimation: false);
+            }
 
             CropOverlayCanvas.Visibility = Visibility.Collapsed;
             if (_cropHandleSet != null)
@@ -1171,6 +1220,54 @@ namespace SnipShot.Features.Editor
             return new Rect(left, top, Math.Max(Constants.MIN_SELECTION_SIZE, right - left), Math.Max(Constants.MIN_SELECTION_SIZE, bottom - top));
         }
 
+        /// <summary>
+        /// Mantiene los handles y el borde del recorte a un tamaño constante en pantalla,
+        /// independiente del zoom.
+        /// </summary>
+        /// <remarks>
+        /// Están dentro del contenido que el ScrollViewer escala, así que sin compensar se
+        /// vuelven enormes al acercar y diminutos al alejar, justo cuando más precisión hace
+        /// falta para colocar el encuadre. Se escalan desde su centro para que sigan anclados
+        /// donde ShowHandles los dejó.
+        /// </remarks>
+        private void UpdateCropVisualsForZoom()
+        {
+            if (_cropHandleSet == null) return;
+
+            double scale = GetCropVisualScale();
+            CropSelectionRect.StrokeThickness = CROP_BORDER_THICKNESS * scale;
+
+            foreach (var handle in EnumerateCropHandles(_cropHandleSet))
+            {
+                // Sin CenterX/CenterY: se escala desde el origen del handle, que es lo que
+                // asume ShowHandles al colocarlo. Escalando desde el centro, el handle se
+                // encoge hacia dentro y se despega de la esquina del encuadre.
+                handle.RenderTransform = new ScaleTransform { ScaleX = scale, ScaleY = scale };
+            }
+        }
+
+        /// <summary>
+        /// Factor que hay que aplicar a los adornos del recorte para que su tamaño en pantalla
+        /// no dependa del zoom.
+        /// </summary>
+        private double GetCropVisualScale()
+        {
+            double zoom = EditorScrollViewer.ZoomFactor;
+            return zoom > 0 ? 1.0 / zoom : 1.0;
+        }
+
+        private static IEnumerable<FrameworkElement> EnumerateCropHandles(ResizeHandleManager.HandleSet handles)
+        {
+            yield return handles.HandleNW;
+            yield return handles.HandleNE;
+            yield return handles.HandleSE;
+            yield return handles.HandleSW;
+            yield return handles.HandleN;
+            yield return handles.HandleE;
+            yield return handles.HandleS;
+            yield return handles.HandleW;
+        }
+
         private void UpdateCropOverlay()
         {
             if (_cropHandleSet == null) return;
@@ -1212,7 +1309,8 @@ namespace SnipShot.Features.Editor
             CropDimRight.Width = Math.Max(0, imageWidth - clamped.Right);
             CropDimRight.Height = clamped.Height;
 
-            ResizeHandleManager.ShowHandles(_cropHandleSet, clamped);
+            UpdateCropVisualsForZoom();
+            ResizeHandleManager.ShowHandles(_cropHandleSet, clamped, GetCropVisualScale());
         }
 
         private async Task<SoftwareBitmap?> CropBitmapAsync(SoftwareBitmap source, int x, int y, int width, int height)
@@ -1359,6 +1457,10 @@ namespace SnipShot.Features.Editor
             if (!_isCropping || sender is not FrameworkElement handle || handle.Tag is not string tag)
                 return;
 
+            // Con Ctrl pulsado no se toca el encuadre: no se marca el evento como manejado
+            // para que burbujee hasta ImageContainer y arranque el desplazamiento.
+            if (e.KeyModifiers.HasFlag(Windows.System.VirtualKeyModifiers.Control)) return;
+
             _isCropHandleDragging = true;
             _activeCropHandle = tag;
             _cropDragStart = e.GetCurrentPoint(AnnotationsCanvas).Position;
@@ -1402,6 +1504,10 @@ namespace SnipShot.Features.Editor
         private void CropSelection_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
             if (!_isCropping) return;
+
+            // Con Ctrl pulsado no se toca el encuadre: no se marca el evento como manejado
+            // para que burbujee hasta ImageContainer y arranque el desplazamiento.
+            if (e.KeyModifiers.HasFlag(Windows.System.VirtualKeyModifiers.Control)) return;
 
             _isCropDragging = true;
             _cropDragStart = e.GetCurrentPoint(AnnotationsCanvas).Position;
@@ -1529,20 +1635,16 @@ namespace SnipShot.Features.Editor
         private void ImageContainer_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
             if (!_hasImage || _annotationManager == null) return;
-            if (_isCropping) return;
 
             var point = e.GetCurrentPoint(AnnotationsCanvas);
             if (!point.Properties.IsLeftButtonPressed) return;
 
-            // Manejar panning con Ctrl + clic izquierdo
-            var isCtrlDown = e.KeyModifiers.HasFlag(Windows.System.VirtualKeyModifiers.Control);
-            if (isCtrlDown)
-            {
-                _isCtrlPressed = true;
-                StartPanning(e);
-                ImageContainer.CapturePointer(e.Pointer);
-                return;
-            }
+            // Con Ctrl el gesto es de desplazamiento y lo gestiona EditorScrollViewer, que lo
+            // recibe esté el cursor sobre la imagen o fuera. Aquí basta con no dibujar y no
+            // marcar Handled, para que el evento llegue hasta allí.
+            if (e.KeyModifiers.HasFlag(Windows.System.VirtualKeyModifiers.Control)) return;
+
+            if (_isCropping) return;
 
             var position = point.Position;
 
@@ -1635,22 +1737,11 @@ namespace SnipShot.Features.Editor
         private void ImageContainer_PointerMoved(object sender, PointerRoutedEventArgs e)
         {
             if (!_hasImage || _annotationManager == null) return;
+
+            // Mientras se desplaza no hay hover que calcular; el gesto lo lleva el ScrollViewer.
+            if (_isPanning) return;
+
             if (_isCropping) return;
-
-            // Detectar estado de Ctrl para actualizar cursor (más robusto que KeyDown/KeyUp)
-            var isCtrlDown = e.KeyModifiers.HasFlag(Windows.System.VirtualKeyModifiers.Control);
-            if (isCtrlDown != _isCtrlPressed && !_isPanning)
-            {
-                _isCtrlPressed = isCtrlDown;
-                UpdatePanningCursor();
-            }
-
-            // Manejar panning
-            if (_isPanning)
-            {
-                ContinuePanning(e);
-                return;
-            }
 
             var point = e.GetCurrentPoint(AnnotationsCanvas);
             var position = point.Position;
@@ -1697,16 +1788,6 @@ namespace SnipShot.Features.Editor
         private void ImageContainer_PointerReleased(object sender, PointerRoutedEventArgs e)
         {
             if (!_hasImage || _annotationManager == null) return;
-
-            // Manejar fin de panning
-            if (_isPanning)
-            {
-                StopPanning();
-                _isCtrlPressed = false;
-                ImageContainer.ReleasePointerCaptures();
-                e.Handled = true;
-                return;
-            }
 
             if (_activeToolType == EditorToolType.Eraser && _isErasing)
             {
@@ -1782,8 +1863,9 @@ namespace SnipShot.Features.Editor
                 _emojiManipulation?.Deselect();
                 if (AnnotationsCanvas.Children.Contains(hitEmoji))
                 {
-                    AnnotationsCanvas.Children.Remove(hitEmoji);
-                    _historyManager.RecordElementRemoved(hitEmoji);
+                    int index = AnnotationsCanvas.Children.IndexOf(hitEmoji);
+                    AnnotationsCanvas.Children.RemoveAt(index);
+                    _historyManager.RecordElementRemoved(hitEmoji, index);
                     ImageModified?.Invoke(this, EventArgs.Empty);
                 }
                 return;
@@ -1795,8 +1877,9 @@ namespace SnipShot.Features.Editor
                 _textManipulation?.Deselect();
                 if (AnnotationsCanvas.Children.Contains(hitText))
                 {
-                    AnnotationsCanvas.Children.Remove(hitText);
-                    _historyManager.RecordElementRemoved(hitText);
+                    int index = AnnotationsCanvas.Children.IndexOf(hitText);
+                    AnnotationsCanvas.Children.RemoveAt(index);
+                    _historyManager.RecordElementRemoved(hitText, index);
                     ImageModified?.Invoke(this, EventArgs.Empty);
                 }
                 return;
@@ -1812,8 +1895,9 @@ namespace SnipShot.Features.Editor
 
                 if (AnnotationsCanvas.Children.Contains(hitShape))
                 {
-                    AnnotationsCanvas.Children.Remove(hitShape);
-                    _historyManager.RecordPathRemoved(hitShape);
+                    int index = AnnotationsCanvas.Children.IndexOf(hitShape);
+                    AnnotationsCanvas.Children.RemoveAt(index);
+                    _historyManager.RecordPathRemoved(hitShape, index);
                     ImageModified?.Invoke(this, EventArgs.Empty);
                 }
             }
@@ -1909,6 +1993,57 @@ namespace SnipShot.Features.Editor
         /// <summary>
         /// Inicia el panning de la imagen
         /// </summary>
+        /// <summary>
+        /// Inicia el desplazamiento con Ctrl desde cualquier punto del visor, esté o no el
+        /// cursor sobre la imagen.
+        /// </summary>
+        private void EditorScrollViewer_PointerPressed(object sender, PointerRoutedEventArgs e)
+        {
+            if (!_hasImage) return;
+            if (!e.KeyModifiers.HasFlag(Windows.System.VirtualKeyModifiers.Control)) return;
+            if (!e.GetCurrentPoint(EditorScrollViewer).Properties.IsLeftButtonPressed) return;
+
+            _isCtrlPressed = true;
+            StartPanning(e);
+            EditorScrollViewer.CapturePointer(e.Pointer);
+        }
+
+        private void EditorScrollViewer_PointerMoved(object sender, PointerRoutedEventArgs e)
+        {
+            if (!_hasImage) return;
+
+            // El cursor se actualiza aquí y no en el ImageContainer para que la mano aparezca
+            // también sobre el espacio vacío que rodea a la imagen.
+            bool isCtrlDown = e.KeyModifiers.HasFlag(Windows.System.VirtualKeyModifiers.Control);
+            if (isCtrlDown != _isCtrlPressed && !_isPanning)
+            {
+                _isCtrlPressed = isCtrlDown;
+                UpdatePanningCursor();
+            }
+
+            if (_isPanning)
+            {
+                ContinuePanning(e);
+            }
+        }
+
+        private void EditorScrollViewer_PointerReleased(object sender, PointerRoutedEventArgs e)
+        {
+            if (!_isPanning) return;
+
+            StopPanning();
+            _isCtrlPressed = false;
+            EditorScrollViewer.ReleasePointerCaptures();
+        }
+
+        private void EditorScrollViewer_PointerCaptureLost(object sender, PointerRoutedEventArgs e)
+        {
+            if (!_isPanning) return;
+
+            StopPanning();
+            _isCtrlPressed = false;
+        }
+
         private void StartPanning(PointerRoutedEventArgs e)
         {
             _isPanning = true;

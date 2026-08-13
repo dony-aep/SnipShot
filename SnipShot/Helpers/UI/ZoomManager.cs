@@ -17,7 +17,19 @@ namespace SnipShot.Helpers.UI
         #region Constants
 
         private const double ZOOM_INCREMENT = 0.1;
+
+        /// <summary>
+        /// Suelo absoluto del zoom. No es un valor elegido: ScrollViewer.MinZoomFactor lanza
+        /// "The MinZoomFactor property cannot be set to a value smaller than 0.1" por debajo
+        /// de esto. No bajarlo.
+        /// </summary>
+        /// <remarks>
+        /// El mínimo real se calcula por imagen en GetMinimumZoom(); esta constante solo es el
+        /// tope que impone el control. Una imagen tan grande que ni al 10% quepa entera en el
+        /// viewport se quedará ahí, que es lo máximo que el ScrollViewer permite alejar.
+        /// </remarks>
         private const double MIN_ZOOM = 0.1;
+
         private const double MAX_ZOOM = 10.0;
 
         #endregion
@@ -27,11 +39,16 @@ namespace SnipShot.Helpers.UI
         private double _currentZoomLevel = 1.0;
         private ZoomMode _currentZoomMode = ZoomMode.FitToWindow;
         private bool _fitZoomPending;
+
+        /// <summary>
+        /// Hay una transición de zoom animada en curso, así que _currentZoomLevel es el
+        /// destino y el ZoomFactor del ScrollViewer todavía no ha llegado a él.
+        /// </summary>
+        private bool _isAnimatingZoom;
         private DispatcherTimer? _sizeChangedDebounceTimer;
 
         private readonly Image _previewImage;
         private readonly ScrollViewer _scrollViewer;
-        private readonly MenuFlyoutItem? _zoomLevelMenuItem;
 
         private SoftwareBitmap? _currentBitmap;
 
@@ -55,15 +72,16 @@ namespace SnipShot.Helpers.UI
         /// </summary>
         /// <param name="previewImage">Control Image para mostrar la vista previa.</param>
         /// <param name="scrollViewer">ScrollViewer que contiene la imagen.</param>
-        /// <param name="zoomLevelMenuItem">MenuFlyoutItem opcional para mostrar el nivel de zoom actual.</param>
-        public ZoomManager(Image previewImage, ScrollViewer scrollViewer, MenuFlyoutItem? zoomLevelMenuItem = null)
+        public ZoomManager(Image previewImage, ScrollViewer scrollViewer)
         {
             _previewImage = previewImage ?? throw new ArgumentNullException(nameof(previewImage));
             _scrollViewer = scrollViewer ?? throw new ArgumentNullException(nameof(scrollViewer));
-            _zoomLevelMenuItem = zoomLevelMenuItem;
 
             // Suscribirse al evento de cambio de tamaño del ScrollViewer
             _scrollViewer.SizeChanged += OnScrollViewerSizeChanged;
+
+            // Para saber cuándo termina una transición animada de zoom
+            _scrollViewer.ViewChanged += OnScrollViewerViewChanged;
         }
 
         #endregion
@@ -84,7 +102,7 @@ namespace SnipShot.Helpers.UI
         /// </summary>
         public void ZoomIn()
         {
-            ApplyZoom(_currentZoomLevel + ZOOM_INCREMENT);
+            ApplyZoom(GetEffectiveZoomLevel() + ZOOM_INCREMENT);
         }
 
         /// <summary>
@@ -92,7 +110,7 @@ namespace SnipShot.Helpers.UI
         /// </summary>
         public void ZoomOut()
         {
-            ApplyZoom(_currentZoomLevel - ZOOM_INCREMENT);
+            ApplyZoom(GetEffectiveZoomLevel() - ZOOM_INCREMENT);
         }
 
         /// <summary>
@@ -128,8 +146,12 @@ namespace SnipShot.Helpers.UI
             _currentBitmap = null;
             _fitZoomPending = false;
 
+            _isAnimatingZoom = false;
+
             _previewImage.Width = double.NaN;
             _previewImage.Height = double.NaN;
+
+            // Sin animar: al limpiar no hay nada que acompañar visualmente.
             _scrollViewer.ChangeView(null, null, 1.0f, true);
         }
 
@@ -161,20 +183,19 @@ namespace SnipShot.Helpers.UI
                 e.Handled = true;
                 return true;
             }
-            // Ctrl + 0 (Actual Size o Fit to Window con Shift)
+            // Ctrl + 0 (Tamaño real)
             else if (e.Key == VirtualKey.Number0 || e.Key == VirtualKey.NumberPad0)
             {
-                var shiftPressed = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift)
-                    .HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
-
-                if (shiftPressed)
-                {
-                    FitToWindow();
-                }
-                else
-                {
-                    SetActualSize();
-                }
+                SetActualSize();
+                e.Handled = true;
+                return true;
+            }
+            // Ctrl + 9 (Ajustar a ventana). No se usa Ctrl+Shift+0: Ctrl+Shift es el atajo
+            // del sistema para cambiar de distribución de teclado, y Windows lo intercepta
+            // antes de que llegue a la app cuando hay más de una instalada.
+            else if (e.Key == VirtualKey.Number9 || e.Key == VirtualKey.NumberPad9)
+            {
+                FitToWindow();
                 e.Handled = true;
                 return true;
             }
@@ -187,6 +208,41 @@ namespace SnipShot.Helpers.UI
         #region Private Methods
 
         /// <summary>
+        /// Devuelve el nivel de zoom que se está viendo de verdad.
+        /// </summary>
+        /// <remarks>
+        /// Los ScrollViewer de la app tienen ZoomMode habilitado, así que el usuario puede
+        /// hacer zoom con Ctrl+rueda sin pasar por este manager. Partir de _currentZoomLevel
+        /// haría que acercar y alejar saltaran desde un valor obsoleto: estando al 250% por
+        /// la rueda, acercar llevaba al 125%. Solo se cae al campo si el ScrollViewer aún no
+        /// tiene un factor válido, que ocurre antes del primer layout.
+        /// </remarks>
+        private double GetEffectiveZoomLevel()
+        {
+            // Con una animación en marcha el ZoomFactor va a medio camino hacia el destino.
+            // Partir de él haría que pulsar acercar dos veces seguidas diera pasos más cortos
+            // de lo pedido, así que mientras dura se usa el destino ya fijado.
+            if (_isAnimatingZoom)
+            {
+                return _currentZoomLevel;
+            }
+
+            double actualZoom = _scrollViewer.ZoomFactor;
+            return actualZoom > 0 ? actualZoom : _currentZoomLevel;
+        }
+
+        /// <summary>
+        /// La vista deja de moverse cuando llega un ViewChanged no intermedio.
+        /// </summary>
+        private void OnScrollViewerViewChanged(object? sender, ScrollViewerViewChangedEventArgs e)
+        {
+            if (!e.IsIntermediate)
+            {
+                _isAnimatingZoom = false;
+            }
+        }
+
+        /// <summary>
         /// Aplica un nivel de zoom específico.
         /// </summary>
         private void ApplyZoom(double newZoomLevel, ZoomMode mode = ZoomMode.Custom)
@@ -194,7 +250,9 @@ namespace SnipShot.Helpers.UI
             if (_currentBitmap == null || _previewImage.Source == null)
                 return;
 
-            newZoomLevel = Math.Clamp(newZoomLevel, MIN_ZOOM, MAX_ZOOM);
+            SyncScrollViewerZoomBounds();
+
+            newZoomLevel = Math.Clamp(newZoomLevel, GetMinimumZoom(), MAX_ZOOM);
             _currentZoomLevel = newZoomLevel;
             _currentZoomMode = mode;
 
@@ -203,8 +261,82 @@ namespace SnipShot.Helpers.UI
             _previewImage.Width = _currentBitmap.PixelWidth;
             _previewImage.Height = _currentBitmap.PixelHeight;
 
-            _scrollViewer.ChangeView(null, null, (float)_currentZoomLevel, true);
-            UpdateZoomDisplay();
+            (double? offsetX, double? offsetY) = GetCenteredOffsets(newZoomLevel);
+            // ChangeView devuelve false si no pudo iniciar la transición; tomando la bandera
+            // de ahí no se queda encendida para siempre en ese caso.
+            _isAnimatingZoom = _scrollViewer.ChangeView(
+                offsetX, offsetY, (float)_currentZoomLevel, disableAnimation: false);
+        }
+
+        /// <summary>
+        /// Calcula los desplazamientos que dejan en el centro del viewport el mismo punto de
+        /// la imagen que ya estaba centrado antes de cambiar el zoom.
+        /// </summary>
+        /// <remarks>
+        /// Pasando null a ChangeView, el ScrollViewer conserva los offsets actuales, que están
+        /// anclados a la esquina superior izquierda: al ampliar, la imagen parece escaparse
+        /// hacia un lado en vez de crecer desde el centro.
+        /// </remarks>
+        private (double? OffsetX, double? OffsetY) GetCenteredOffsets(double newZoomLevel)
+        {
+            double currentZoom = _scrollViewer.ZoomFactor;
+            double viewportWidth = _scrollViewer.ViewportWidth;
+            double viewportHeight = _scrollViewer.ViewportHeight;
+
+            // Antes del primer layout no hay viewport ni zoom con los que calcular nada;
+            // se deja que el ScrollViewer decida.
+            if (currentZoom <= 0 || viewportWidth <= 0 || viewportHeight <= 0)
+            {
+                return (null, null);
+            }
+
+            double centerX = (_scrollViewer.HorizontalOffset + (viewportWidth / 2)) / currentZoom;
+            double centerY = (_scrollViewer.VerticalOffset + (viewportHeight / 2)) / currentZoom;
+
+            return (
+                (centerX * newZoomLevel) - (viewportWidth / 2),
+                (centerY * newZoomLevel) - (viewportHeight / 2));
+        }
+
+        /// <summary>
+        /// Zoom mínimo útil: aquel con el que la imagen entra entera en el viewport.
+        /// </summary>
+        /// <remarks>
+        /// Alejarse más allá no aporta nada, solo encoge una imagen que ya se ve completa.
+        /// En imágenes más pequeñas que el viewport el mínimo es el 100%, porque tampoco
+        /// tiene sentido reducirlas todavía más.
+        /// </remarks>
+        private double GetMinimumZoom()
+        {
+            if (_currentBitmap == null)
+            {
+                return MIN_ZOOM;
+            }
+
+            double viewportWidth = _scrollViewer.ViewportWidth;
+            double viewportHeight = _scrollViewer.ViewportHeight;
+
+            if (viewportWidth <= 0 || viewportHeight <= 0
+                || _currentBitmap.PixelWidth <= 0 || _currentBitmap.PixelHeight <= 0)
+            {
+                return MIN_ZOOM;
+            }
+
+            double fitFactor = Math.Min(
+                viewportWidth / _currentBitmap.PixelWidth,
+                viewportHeight / _currentBitmap.PixelHeight);
+
+            return Math.Clamp(Math.Min(fitFactor, 1.0), MIN_ZOOM, 1.0);
+        }
+
+        /// <summary>
+        /// Aplica los límites al propio ScrollViewer para que el zoom con Ctrl+rueda respete
+        /// el mismo rango que los botones y los atajos.
+        /// </summary>
+        private void SyncScrollViewerZoomBounds()
+        {
+            _scrollViewer.MaxZoomFactor = (float)MAX_ZOOM;
+            _scrollViewer.MinZoomFactor = (float)GetMinimumZoom();
         }
 
         /// <summary>
@@ -251,53 +383,15 @@ namespace SnipShot.Helpers.UI
             _previewImage.Width = imageWidth;
             _previewImage.Height = imageHeight;
 
-            _scrollViewer.ChangeView(null, null, (float)_currentZoomLevel, true);
-            UpdateZoomDisplay();
+            // Antes de mover la vista, para que el nuevo mínimo (que es este mismo factor)
+            // ya esté aplicado y el ScrollViewer no rechace el valor.
+            SyncScrollViewerZoomBounds();
+
+            _isAnimatingZoom = _scrollViewer.ChangeView(
+                null, null, (float)_currentZoomLevel, disableAnimation: false);
         }
 
-        /// <summary>
-        /// Actualiza la visualización del nivel de zoom en el menú.
-        /// </summary>
-        private void UpdateZoomDisplay()
-        {
-            if (_zoomLevelMenuItem?.Template == null)
-                return;
 
-            var textBlock = FindElementInTemplate<TextBlock>(_zoomLevelMenuItem, "ZoomLevelText");
-            if (textBlock != null)
-            {
-                string displayText = _currentZoomMode switch
-                {
-                    ZoomMode.FitToWindow => "Ajustado",
-                    ZoomMode.ActualSize => "100%",
-                    ZoomMode.Custom => $"{(_currentZoomLevel * 100):F0}%",
-                    _ => "100%"
-                };
-                textBlock.Text = displayText;
-            }
-        }
-
-        /// <summary>
-        /// Busca un elemento en la plantilla visual.
-        /// </summary>
-        private T? FindElementInTemplate<T>(FrameworkElement element, string name) where T : FrameworkElement
-        {
-            int childCount = VisualTreeHelper.GetChildrenCount(element);
-            for (int i = 0; i < childCount; i++)
-            {
-                var child = VisualTreeHelper.GetChild(element, i) as FrameworkElement;
-                if (child != null)
-                {
-                    if (child is T typedChild && child.Name == name)
-                        return typedChild;
-
-                    var result = FindElementInTemplate<T>(child, name);
-                    if (result != null)
-                        return result;
-                }
-            }
-            return null;
-        }
 
         /// <summary>
         /// Maneja el cambio de tamaño del ScrollViewer con debounce.
