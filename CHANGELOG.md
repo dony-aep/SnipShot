@@ -10,7 +10,7 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 ## [1.2.0] - 2026-08-13
 
 ### Added
-- Proyecto de pruebas SnipShot.Tests (MSTest) con 21 pruebas sobre la interpretacion de la respuesta de GitHub Releases: comparacion de versiones, tolerancia a respuestas incompletas y localizacion del instalador
+- Proyecto de pruebas SnipShot.Tests (MSTest) con 28 pruebas sobre la comprobacion de actualizaciones: comparacion de versiones, tolerancia a respuestas incompletas, localizacion del instalador y construccion de los mensajes de error HTTP
 - Los controles interactivos ahora exponen AutomationId y, cuando son solo icono, un nombre accesible; esto habilita lectores de pantalla y pruebas de UI Automation
 - Los botones cuyo tooltip cambia en ejecucion (modo de captura, delay, OCR) sincronizan tambien su nombre accesible
 - Indicador (Debug) junto a la version en Ajustes y en el tooltip de la bandeja, para distinguir de un vistazo una compilacion de desarrollo de una de Release
@@ -54,6 +54,7 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 - Deshacer un borrado devolvia la anotacion encima de todas las demas en lugar de a su orden original
 - Los tiradores del recorte se agrandaban o encogian con el zoom, justo cuando mas precision hace falta
 - El tooltip del boton de descartar captura saltaba sobre el area de captura al pasar el raton por la barra
+- Al agotarse el limite de la API de GitHub, la comprobacion de actualizaciones mostraba solo Forbidden; ahora explica que se alcanzo el limite e indica a que hora se restablece. Un 403 por permisos se sigue distinguiendo, porque lo que identifica al limite es que x-ratelimit-remaining venga a 0
 
 ### Removed
 - Helpers/Capture/ScreenCaptureHelper.cs, sin ningun llamador, que duplicaba la conversion GDI a SoftwareBitmap con un intercambio de canales innecesario

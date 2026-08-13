@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using SnipShot.Services;
 
 namespace SnipShot.Tests.Services;
@@ -189,6 +190,76 @@ public class UpdateServiceTests
 
         Assert.IsTrue(resultado.Success);
         Assert.IsNull(resultado.DownloadUrl);
+    }
+
+    #endregion
+
+    #region Mensajes de error HTTP
+
+    [TestMethod]
+    public void RespuestaNotFound_IndicaQueNoHayReleases()
+    {
+        var mensaje = UpdateService.BuildHttpErrorMessage(HttpStatusCode.NotFound, null, null);
+
+        StringAssert.Contains(mensaje, "No se encontraron releases");
+    }
+
+    [TestMethod]
+    public void Forbidden_ConLimiteAgotado_IndicaElLimiteYLaHoraDeReinicio()
+    {
+        // 2026-08-13 17:51 en la zona local, expresado en segundos Unix
+        var reinicio = new DateTimeOffset(2026, 8, 13, 17, 51, 0, TimeZoneInfo.Local.GetUtcOffset(new DateTime(2026, 8, 13)));
+
+        var mensaje = UpdateService.BuildHttpErrorMessage(
+            HttpStatusCode.Forbidden, "0", reinicio.ToUnixTimeSeconds().ToString());
+
+        StringAssert.Contains(mensaje, "límite");
+        StringAssert.Contains(mensaje, "17:51");
+    }
+
+    [TestMethod]
+    public void Forbidden_SinCabeceraDeLimite_NoSeConfundeConElLimite()
+    {
+        // Un 403 por permisos no trae x-ratelimit-remaining a 0: no debe anunciarse
+        // como limite alcanzado ni prometer una hora de reinicio que no existe.
+        var mensaje = UpdateService.BuildHttpErrorMessage(HttpStatusCode.Forbidden, null, null);
+
+        StringAssert.Contains(mensaje, "Forbidden");
+        Assert.IsFalse(mensaje.Contains("límite"));
+    }
+
+    [TestMethod]
+    public void Forbidden_ConPeticionesRestantes_NoSeTrataComoLimite()
+    {
+        var mensaje = UpdateService.BuildHttpErrorMessage(HttpStatusCode.Forbidden, "42", null);
+
+        StringAssert.Contains(mensaje, "Forbidden");
+        Assert.IsFalse(mensaje.Contains("límite"));
+    }
+
+    [TestMethod]
+    public void TooManyRequests_ConLimiteAgotado_TambienSeReconoce()
+    {
+        var mensaje = UpdateService.BuildHttpErrorMessage(HttpStatusCode.TooManyRequests, "0", null);
+
+        StringAssert.Contains(mensaje, "límite");
+    }
+
+    [TestMethod]
+    public void LimiteAgotado_ConReinicioIlegible_OmiteLaHoraSinLanzar()
+    {
+        var mensaje = UpdateService.BuildHttpErrorMessage(HttpStatusCode.Forbidden, "0", "no-es-un-numero");
+
+        StringAssert.Contains(mensaje, "límite");
+        StringAssert.Contains(mensaje, "más tarde");
+    }
+
+    [TestMethod]
+    public void OtroErrorHttp_MuestraElCodigo()
+    {
+        var mensaje = UpdateService.BuildHttpErrorMessage(HttpStatusCode.ServiceUnavailable, null, null);
+
+        StringAssert.Contains(mensaje, "ServiceUnavailable");
     }
 
     #endregion

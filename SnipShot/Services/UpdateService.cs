@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -101,9 +102,10 @@ namespace SnipShot.Services
                 {
                     return new UpdateCheckResult
                     {
-                        ErrorMessage = response.StatusCode == System.Net.HttpStatusCode.NotFound
-                            ? "No se encontraron releases publicados."
-                            : $"Error al contactar GitHub: {response.StatusCode}"
+                        ErrorMessage = BuildHttpErrorMessage(
+                            response.StatusCode,
+                            GetHeaderValue(response, "x-ratelimit-remaining"),
+                            GetHeaderValue(response, "x-ratelimit-reset"))
                     };
                 }
 
@@ -153,6 +155,88 @@ namespace SnipShot.Services
         /// </remarks>
         /// <param name="json">Cuerpo JSON devuelto por la API.</param>
         /// <param name="currentVersion">Versión instalada contra la que comparar.</param>
+        /// <summary>
+        /// Construye el mensaje para una respuesta HTTP que no fue correcta.
+        /// </summary>
+        /// <remarks>
+        /// Se separa de la llamada HTTP para poder probarla sin red, igual que
+        /// <see cref="ParseReleaseResponse"/>.
+        /// </remarks>
+        /// <param name="statusCode">Código devuelto por la API.</param>
+        /// <param name="rateLimitRemaining">Cabecera x-ratelimit-remaining, si vino.</param>
+        /// <param name="rateLimitReset">Cabecera x-ratelimit-reset, en segundos Unix.</param>
+        internal static string BuildHttpErrorMessage(
+            HttpStatusCode statusCode,
+            string? rateLimitRemaining,
+            string? rateLimitReset)
+        {
+            if (statusCode == HttpStatusCode.NotFound)
+            {
+                return "No se encontraron releases publicados.";
+            }
+
+            if (IsRateLimited(statusCode, rateLimitRemaining))
+            {
+                var reset = ParseRateLimitReset(rateLimitReset);
+                return reset.HasValue
+                    ? $"Se alcanzó el límite de consultas a GitHub. Inténtalo de nuevo a partir de las {reset.Value:HH:mm}."
+                    : "Se alcanzó el límite de consultas a GitHub. Inténtalo de nuevo más tarde.";
+            }
+
+            return $"Error al contactar GitHub: {statusCode}";
+        }
+
+        /// <summary>
+        /// Determina si la respuesta corresponde al límite de peticiones agotado.
+        /// </summary>
+        /// <remarks>
+        /// GitHub responde 403, no 429, al agotarse el límite anónimo —60 peticiones por hora
+        /// y por IP—. Lo único que lo separa de un 403 por permisos es que
+        /// x-ratelimit-remaining venga a 0, así que sin mirar esa cabecera no se pueden
+        /// distinguir. Se acepta también 429 porque la API lo usa en algunos límites
+        /// secundarios.
+        /// </remarks>
+        private static bool IsRateLimited(HttpStatusCode statusCode, string? rateLimitRemaining)
+        {
+            if (statusCode != HttpStatusCode.Forbidden && statusCode != HttpStatusCode.TooManyRequests)
+            {
+                return false;
+            }
+
+            return int.TryParse(rateLimitRemaining, out int remaining) && remaining <= 0;
+        }
+
+        /// <summary>
+        /// Convierte la cabecera x-ratelimit-reset a hora local, o null si no es utilizable.
+        /// </summary>
+        private static DateTime? ParseRateLimitReset(string? rateLimitReset)
+        {
+            if (!long.TryParse(rateLimitReset, out long unixSeconds))
+            {
+                return null;
+            }
+
+            try
+            {
+                return DateTimeOffset.FromUnixTimeSeconds(unixSeconds).ToLocalTime().DateTime;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                // Un valor fuera del rango representable no debe tumbar la comprobación
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Devuelve la primera aparición de una cabecera, o null si la respuesta no la trae.
+        /// </summary>
+        private static string? GetHeaderValue(HttpResponseMessage response, string name)
+        {
+            return response.Headers.TryGetValues(name, out var values)
+                ? System.Linq.Enumerable.FirstOrDefault(values)
+                : null;
+        }
+
         internal static UpdateCheckResult ParseReleaseResponse(string json, Version currentVersion)
         {
             using var document = JsonDocument.Parse(json);
