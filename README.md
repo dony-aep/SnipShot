@@ -44,7 +44,7 @@ Una aplicación de captura de pantalla moderna para Windows desarrollada con Win
 | Windows App SDK | 1.8 | SDK moderno para aplicaciones Windows |
 | WinUI 3 | - | Framework de interfaz de usuario |
 | Win2D | 1.3.2 | Motor de gráficos 2D de alto rendimiento |
-| C# | 12 | Lenguaje de programación |
+| C# | 14 | Lenguaje de programación |
 
 ## Requisitos
 
@@ -52,41 +52,60 @@ Una aplicación de captura de pantalla moderna para Windows desarrollada con Win
 - **Arquitecturas soportadas:** x64, ARM64
 - **Para desarrollo:** 
   - .NET 10.0 SDK
-  - Visual Studio 2022 (recomendado)
+  - Visual Studio 2026 (necesario para generar el paquete MSIX)
   - Windows App SDK 1.8
 
 > ⚠️ **Nota:** Esta aplicación no es compatible con Windows 10 ni versiones anteriores de Windows 11.
 
+## Instalación
+
+Descarga el `.msixbundle` y el `.cer` de la [última release](https://github.com/dony-aep/SnipShot/releases/latest).
+
+El paquete está firmado con un certificado autofirmado, así que la primera vez hay que
+confiar en él. En PowerShell **como administrador**:
+
+```powershell
+Import-Certificate -FilePath .\SnipShot_1.2.0.0_x64_arm64.cer `
+    -CertStoreLocation Cert:\LocalMachine\TrustedPeople
+```
+
+Después ya se puede instalar el paquete con doble clic, o desde PowerShell:
+
+```powershell
+Add-AppxPackage .\SnipShot_1.2.0.0_x64_arm64.msixbundle
+```
+
 ## Compilación
 
-```bash
+```powershell
 # Clonar el repositorio
 git clone https://github.com/dony-aep/SnipShot.git
-
-# Navegar al directorio
 cd SnipShot
 
-# Restaurar dependencias
-dotnet restore
+# Compilar y ejecutar
+# El -p:Platform=x64 es obligatorio: sin el, MSBuild resuelve AnyCPU y el
+# empaquetado MSIX falla. En equipos ARM64 usar arm64 en su lugar.
+dotnet build SnipShot/SnipShot.csproj -p:Platform=x64
+dotnet run --project SnipShot/SnipShot.csproj -p:Platform=x64
 
-# Compilar el proyecto
-dotnet build
-
-# Ejecutar la aplicación
-dotnet run --project SnipShot/SnipShot.csproj
+# Pruebas
+dotnet test SnipShot.Tests/SnipShot.Tests.csproj -p:Platform=x64
 ```
 
 ## Publicación
 
-Para crear un paquete de distribución:
+El paquete MSIX **no se genera con la CLI de dotnet**: hace falta MSBuild de Visual Studio.
 
-```bash
-# Windows x64
-dotnet publish -c Release -r win-x64
+```powershell
+$msbuild = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
+    -latest -requires Microsoft.Component.MSBuild -find "MSBuild\**\Bin\MSBuild.exe"
 
-# Windows ARM64
-dotnet publish -c Release -r win-arm64
+& $msbuild SnipShot.sln /restore /p:Configuration=Release /p:Platform=x64 `
+    '/p:AppxBundlePlatforms=x64|arm64' /p:AppxBundle=Always `
+    /p:UapAppxPackageBuildMode=SideloadOnly /p:GenerateAppxPackageOnBuild=true
 ```
+
+El bundle firmado y su certificado quedan en `SnipShot/AppPackages/SnipShot_<versión>_Test/`.
 
 ## Licencia
 
