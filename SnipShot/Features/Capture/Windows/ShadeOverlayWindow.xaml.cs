@@ -305,6 +305,14 @@ namespace SnipShot.Features.Capture.Windows
             if (_overlayClosed) return;
             _overlayClosed = true;
 
+            // Ocultar antes de limpiar y cerrar: con la ventana aún a la vista, desmontar el
+            // modo y destruir la ventana dejaba ver un fotograma negro al terminar la captura.
+            try
+            {
+                AppWindow.Hide();
+            }
+            catch { }
+
             // Limpiar el modo actual
             if (_currentMode != null)
             {
