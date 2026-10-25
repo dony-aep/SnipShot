@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -27,11 +29,15 @@ namespace SnipShot.Services
         {
             public const string Status = "status";
             public const string Capture = "capture";
+            public const string ListWindows = "list-windows";
         }
 
         public static class CaptureModes
         {
             public const string FullScreen = "fullscreen";
+            public const string Window = "window";
+
+            public const string Available = $"{FullScreen}, {Window}";
         }
 
         public const int MaxDelaySeconds = 30;
@@ -50,6 +56,8 @@ namespace SnipShot.Services
             public const string NotRunning = "not_running";
             public const string AccessDenied = "access_denied";
             public const string Disabled = "disabled";
+            public const string NotFound = "not_found";
+            public const string Ambiguous = "ambiguous";
             public const string Internal = "internal";
         }
 
@@ -100,7 +108,7 @@ namespace SnipShot.Services
 
             error = parsed.Command switch
             {
-                Commands.Status => null,
+                Commands.Status or Commands.ListWindows => null,
                 Commands.Capture => ValidateCapture(parsed),
                 _ => new ControlError(ErrorCodes.UnknownCommand, $"Comando desconocido: {parsed.Command}."),
             };
@@ -116,12 +124,28 @@ namespace SnipShot.Services
 
         private static ControlError? ValidateCapture(ControlRequest request)
         {
-            if (request.Mode != CaptureModes.FullScreen)
+            if (request.Mode is not (CaptureModes.FullScreen or CaptureModes.Window))
             {
                 return new ControlError(ErrorCodes.InvalidRequest,
                     request.Mode is null
-                        ? $"Falta el modo de captura. Modos disponibles: {CaptureModes.FullScreen}."
-                        : $"Modo de captura no admitido: {request.Mode}. Modos disponibles: {CaptureModes.FullScreen}.");
+                        ? $"Falta el modo de captura. Modos disponibles: {CaptureModes.Available}."
+                        : $"Modo de captura no admitido: {request.Mode}. Modos disponibles: {CaptureModes.Available}.");
+            }
+
+            var selectors = (request.Hwnd is not null ? 1 : 0)
+                + (string.IsNullOrWhiteSpace(request.Title) ? 0 : 1)
+                + (string.IsNullOrWhiteSpace(request.Process) ? 0 : 1);
+
+            if (request.Mode == CaptureModes.Window && selectors != 1)
+            {
+                return new ControlError(ErrorCodes.InvalidRequest,
+                    "Para capturar una ventana indica exactamente una de estas opciones: hwnd, title o process.");
+            }
+
+            if (request.Mode == CaptureModes.FullScreen && selectors != 0)
+            {
+                return new ControlError(ErrorCodes.InvalidRequest,
+                    "hwnd, title y process solo se usan con el modo window.");
             }
 
             if (request.DelaySeconds is < 0 or > MaxDelaySeconds)
@@ -146,6 +170,34 @@ namespace SnipShot.Services
 
             return null;
         }
+
+        /// <summary>
+        /// Ventanas que encajan con el selector de la petición: el handle exacto, el título por
+        /// subcadena sin distinguir mayúsculas, o el nombre del proceso con o sin ".exe".
+        /// </summary>
+        public static WindowEntry[] FindWindows(IEnumerable<WindowEntry> windows, ControlRequest request)
+        {
+            if (request.Hwnd is { } hwnd)
+            {
+                return windows.Where(w => w.Hwnd == hwnd).ToArray();
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Title))
+            {
+                return windows.Where(w => w.Title.Contains(request.Title, StringComparison.OrdinalIgnoreCase)).ToArray();
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Process))
+            {
+                var process = StripExe(request.Process);
+                return windows.Where(w => string.Equals(StripExe(w.Process), process, StringComparison.OrdinalIgnoreCase)).ToArray();
+            }
+
+            return [];
+        }
+
+        private static string StripExe(string processName) =>
+            processName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? processName[..^4] : processName;
 
         public static string SerializeResponse(ControlResponse response) =>
             JsonSerializer.Serialize(response, ControlJsonContext.Default.ControlResponse);
@@ -183,7 +235,8 @@ namespace SnipShot.Services
 
             return response.Error?.Code switch
             {
-                ErrorCodes.InvalidRequest or ErrorCodes.UnsupportedVersion or ErrorCodes.UnknownCommand => 2,
+                ErrorCodes.InvalidRequest or ErrorCodes.UnsupportedVersion or ErrorCodes.UnknownCommand
+                    or ErrorCodes.NotFound or ErrorCodes.Ambiguous => 2,
                 ErrorCodes.NotRunning or ErrorCodes.AccessDenied or ErrorCodes.Disabled => 4,
                 _ => 1,
             };
@@ -209,6 +262,13 @@ namespace SnipShot.Services
         public bool Clipboard { get; init; }
 
         public int DelaySeconds { get; init; }
+
+        // Selectores del modo window; se usa exactamente uno.
+        public long? Hwnd { get; init; }
+
+        public string? Title { get; init; }
+
+        public string? Process { get; init; }
     }
 
     internal sealed class ControlResponse
@@ -223,6 +283,11 @@ namespace SnipShot.Services
         public StatusInfo? Status { get; init; }
 
         public CaptureResult? Capture { get; init; }
+
+        /// <summary>
+        /// Lista de list-windows, o las candidatas cuando el selector de una captura es ambiguo.
+        /// </summary>
+        public WindowEntry[]? Windows { get; init; }
 
         public static ControlResponse Failure(string code, string message) =>
             new() { Ok = false, Error = new ControlError(code, message) };
@@ -241,7 +306,18 @@ namespace SnipShot.Services
     /// <summary>
     /// Captura guardada: ruta del PNG y tamaño en píxeles.
     /// </summary>
-    internal sealed record CaptureResult(string Path, int Width, int Height, string Mode);
+    internal sealed record CaptureResult(string Path, int Width, int Height, string Mode)
+    {
+        /// <summary>
+        /// Ventana capturada, en el modo window.
+        /// </summary>
+        public WindowEntry? Window { get; init; }
+    }
+
+    /// <summary>
+    /// Ventana capturable. Las coordenadas son de pantalla, en píxeles físicos.
+    /// </summary>
+    internal sealed record WindowEntry(long Hwnd, string Title, string Process, int ProcessId, int X, int Y, int Width, int Height);
 
     [JsonSourceGenerationOptions(
         PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,

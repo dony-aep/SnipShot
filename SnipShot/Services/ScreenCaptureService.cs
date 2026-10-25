@@ -4,6 +4,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using Windows.Graphics;
 using Windows.Graphics.Imaging;
+using SnipShot.Helpers.WindowManagement;
 using SnipShot.Models;
 using static SnipShot.Models.NativeMethods;
 
@@ -22,6 +23,9 @@ namespace SnipShot.Services
         private const int SM_CXVIRTUALSCREEN = 78;
         private const int SM_CYVIRTUALSCREEN = 79;
         private const int SRCCOPY = 0x00CC0020;
+        // Sin este flag PrintWindow deja en negro el contenido de apps con aceleración por GPU
+        // (navegadores, Electron, WinUI).
+        private const uint PW_RENDERFULLCONTENT = 0x00000002;
 
         #endregion
 
@@ -115,6 +119,63 @@ namespace SnipShot.Services
                     // Limpiar recursos
                     if (hBitmap != IntPtr.Zero) DeleteObject(hBitmap);
                     if (hdcMemDC != IntPtr.Zero) DeleteDC(hdcMemDC);
+                    if (hdcScreen != IntPtr.Zero) ReleaseDC(IntPtr.Zero, hdcScreen);
+                }
+            });
+        }
+
+        /// <summary>
+        /// Captura el contenido de una ventana con PrintWindow, aunque esté tapada por otras y sin
+        /// traerla al frente.
+        /// </summary>
+        /// <returns>SoftwareBitmap recortado al área visible de la ventana, o null si falla.</returns>
+        public async Task<SoftwareBitmap?> CaptureWindowAsync(IntPtr hwnd)
+        {
+            return await Task.Run(() =>
+            {
+                if (!GetWindowRect(hwnd, out RECT windowRect) ||
+                    !WindowEnumerationHelper.TryGetWindowBounds(hwnd, out var visible))
+                {
+                    return null;
+                }
+
+                int fullWidth = windowRect.Right - windowRect.Left;
+                int fullHeight = windowRect.Bottom - windowRect.Top;
+
+                IntPtr hdcScreen = IntPtr.Zero;
+                IntPtr hdcFull = IntPtr.Zero;
+                IntPtr hdcVisible = IntPtr.Zero;
+                IntPtr hFull = IntPtr.Zero;
+                IntPtr hVisible = IntPtr.Zero;
+
+                try
+                {
+                    hdcScreen = GetDC(IntPtr.Zero);
+                    hdcFull = CreateCompatibleDC(hdcScreen);
+                    hFull = CreateCompatibleBitmap(hdcScreen, fullWidth, fullHeight);
+                    SelectObject(hdcFull, hFull);
+
+                    if (!PrintWindow(hwnd, hdcFull, PW_RENDERFULLCONTENT))
+                    {
+                        return null;
+                    }
+
+                    // GetWindowRect incluye los bordes invisibles de redimensionado; el rectángulo
+                    // de DWM es lo que se ve en pantalla.
+                    hdcVisible = CreateCompatibleDC(hdcScreen);
+                    hVisible = CreateCompatibleBitmap(hdcScreen, visible.Width, visible.Height);
+                    SelectObject(hdcVisible, hVisible);
+                    BitBlt(hdcVisible, 0, 0, visible.Width, visible.Height,
+                        hdcFull, visible.X - windowRect.Left, visible.Y - windowRect.Top, SRCCOPY);
+
+                    return ConvertToBitmap(hdcScreen, hVisible, visible.Width, visible.Height);
+                }
+                finally
+                {
+                    if (hVisible != IntPtr.Zero) DeleteObject(hVisible);
+                    if (hFull != IntPtr.Zero) DeleteObject(hFull);
+                    if (hdcVisible != IntPtr.Zero) DeleteDC(hdcVisible);
+                    if (hdcFull != IntPtr.Zero) DeleteDC(hdcFull);
                     if (hdcScreen != IntPtr.Zero) ReleaseDC(IntPtr.Zero, hdcScreen);
                 }
             });

@@ -67,7 +67,29 @@ public class CliArgumentsTests
     public void ModoDesconocido_LlegaTalCualALaApp()
     {
         // La app es la que conoce los modos; el CLI no duplica esa lista.
-        Assert.AreEqual("window", Aceptar("capture", "window").Mode);
+        Assert.AreEqual("pantalla", Aceptar("capture", "pantalla").Mode);
+    }
+
+    [TestMethod]
+    public void ListWindows_SeConvierteEnSuPeticion()
+    {
+        Assert.AreEqual(ControlProtocol.Commands.ListWindows, Aceptar("list-windows").Command);
+    }
+
+    [TestMethod]
+    [DataRow("12345", 12345L, "decimal, como lo da list-windows")]
+    [DataRow("0x3039", 12345L, "hexadecimal, como lo dan Spy++ o winapp")]
+    [DataRow("0X3039", 12345L, "prefijo en mayúsculas")]
+    public void Hwnd_AceptaDecimalYHexadecimal(string valor, long esperado, string caso)
+    {
+        Assert.AreEqual(esperado, Aceptar("capture", "window", "--hwnd", valor).Hwnd, caso);
+    }
+
+    [TestMethod]
+    public void TituloYProceso_LleganTalCual()
+    {
+        Assert.AreEqual("Bloc de notas", Aceptar("capture", "window", "--title", "Bloc de notas").Title);
+        Assert.AreEqual("notepad.exe", Aceptar("capture", "window", "--process", "notepad.exe").Process);
     }
 
     [TestMethod]
@@ -81,6 +103,11 @@ public class CliArgumentsTests
     [DataRow(new[] { "capture", "fullscreen", "--delay", "tres" }, "retardo que no es un número")]
     [DataRow(new[] { "capture", "fullscreen", "--delay", "-1" }, "retardo con signo")]
     [DataRow(new[] { "capture", "fullscreen", "--format", "jpg" }, "opción desconocida")]
+    [DataRow(new[] { "capture", "window", "--hwnd", "ventana" }, "handle que no es un número")]
+    [DataRow(new[] { "capture", "window", "--hwnd", "0xZZ" }, "hexadecimal inválido")]
+    [DataRow(new[] { "capture", "window", "--title" }, "--title sin valor")]
+    [DataRow(new[] { "capture", "window", "--process" }, "--process sin valor")]
+    [DataRow(new[] { "list-windows", "--all" }, "list-windows no admite opciones")]
     public void ArgumentosInvalidos_SeRechazanConUnMensaje(string[] args, string motivo)
     {
         var error = Rechazar(args);

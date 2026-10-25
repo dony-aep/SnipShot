@@ -114,6 +114,15 @@ namespace SnipShot.Services
         }
 
         /// <summary>
+        /// Captura una ventana concreta, sin overlay de selección. La usa el comando snipshot.
+        /// </summary>
+        public async Task<SoftwareBitmap?> CaptureWindowByHandleAsync(IntPtr windowHandle)
+        {
+            var screenshot = await _screenCaptureService.CaptureWindowAsync(windowHandle);
+            return screenshot == null ? null : await ApplyBorderIfEnabledAsync(screenshot);
+        }
+
+        /// <summary>
         /// Ejecuta una captura de pantalla completa
         /// </summary>
         public async Task<SoftwareBitmap?> CaptureFullScreenAsync()

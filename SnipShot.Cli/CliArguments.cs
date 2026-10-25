@@ -11,7 +11,9 @@ namespace SnipShot.Cli
     internal static class CliArguments
     {
         public const string Usage =
-            "Uso: snipshot status | snipshot capture fullscreen [--out <archivo.png>] [--clipboard] [--delay <segundos>]";
+            "Uso: snipshot status | snipshot list-windows | "
+            + "snipshot capture fullscreen|window [--hwnd <h> | --title <texto> | --process <nombre>] "
+            + "[--out <archivo.png>] [--clipboard] [--delay <segundos>]";
 
         /// <param name="currentDirectory">Directorio contra el que se resuelven las rutas
         /// relativas. La app tiene otro directorio de trabajo, así que se envían absolutas.</param>
@@ -25,8 +27,8 @@ namespace SnipShot.Cli
 
             switch (args)
             {
-                case [ControlProtocol.Commands.Status]:
-                    request = new ControlRequest { Command = ControlProtocol.Commands.Status };
+                case [ControlProtocol.Commands.Status or ControlProtocol.Commands.ListWindows]:
+                    request = new ControlRequest { Command = args[0] };
                     error = null;
                     return true;
 
@@ -54,6 +56,9 @@ namespace SnipShot.Cli
             string? outPath = null;
             var clipboard = false;
             var delaySeconds = 0;
+            long? hwnd = null;
+            string? title = null;
+            string? process = null;
 
             for (var i = 0; i < options.Length; i++)
             {
@@ -75,7 +80,24 @@ namespace SnipShot.Cli
                         }
                         break;
 
-                    case "--out" or "--delay":
+                    case "--hwnd" when i + 1 < options.Length:
+                        if (!TryParseHwnd(options[++i], out var parsedHwnd))
+                        {
+                            error = $"El handle debe ser un número, decimal o hexadecimal con 0x: {options[i]}.";
+                            return false;
+                        }
+                        hwnd = parsedHwnd;
+                        break;
+
+                    case "--title" when i + 1 < options.Length:
+                        title = options[++i];
+                        break;
+
+                    case "--process" when i + 1 < options.Length:
+                        process = options[++i];
+                        break;
+
+                    case "--out" or "--delay" or "--hwnd" or "--title" or "--process":
                         error = $"Falta el valor de {options[i]}.";
                         return false;
 
@@ -92,9 +114,21 @@ namespace SnipShot.Cli
                 Out = outPath,
                 Clipboard = clipboard,
                 DelaySeconds = delaySeconds,
+                Hwnd = hwnd,
+                Title = title,
+                Process = process,
             };
             error = null;
             return true;
+        }
+
+        // list-windows los da en decimal, pero otras herramientas (Spy++, winapp) los muestran
+        // en hexadecimal.
+        private static bool TryParseHwnd(string value, out long hwnd)
+        {
+            return value.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
+                ? long.TryParse(value[2..], NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out hwnd)
+                : long.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out hwnd);
         }
     }
 }

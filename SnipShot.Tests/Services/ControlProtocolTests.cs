@@ -122,6 +122,32 @@ public class ControlProtocolTests
     }
 
     [TestMethod]
+    [DataRow("\"mode\":\"window\",\"hwnd\":12345", "por handle")]
+    [DataRow("\"mode\":\"window\",\"title\":\"Bloc\"", "por título")]
+    [DataRow("\"mode\":\"window\",\"process\":\"notepad\"", "por proceso")]
+    public void CapturaDeVentanaConUnSelector_SeAcepta(string campos, string caso)
+    {
+        Assert.IsTrue(ControlProtocol.TryParseRequest(Captura(campos), out _, out var error), $"{caso}: {error?.Message}");
+    }
+
+    [TestMethod]
+    [DataRow("\"mode\":\"window\"", "ventana sin selector")]
+    [DataRow("\"mode\":\"window\",\"title\":\"   \"", "título en blanco no cuenta como selector")]
+    [DataRow("\"mode\":\"window\",\"hwnd\":1,\"process\":\"notepad\"", "dos selectores")]
+    [DataRow("\"mode\":\"fullscreen\",\"title\":\"Bloc\"", "selector con pantalla completa")]
+    public void CapturaConSelectoresIncorrectos_EsPeticionInvalida(string campos, string motivo)
+    {
+        AssertRechazada(Captura(campos), ControlProtocol.ErrorCodes.InvalidRequest, motivo);
+    }
+
+    [TestMethod]
+    public void ListWindows_SeAcepta()
+    {
+        Assert.IsTrue(ControlProtocol.TryParseRequest("{\"version\":1,\"command\":\"list-windows\"}", out var peticion, out _));
+        Assert.AreEqual(ControlProtocol.Commands.ListWindows, peticion.Command);
+    }
+
+    [TestMethod]
     public void PeticionDeCapturaDelCli_ConservaSusOpciones()
     {
         var enviada = new ControlRequest
@@ -141,7 +167,81 @@ public class ControlProtocolTests
 
     #endregion
 
+    #region Selección de ventanas
+
+    private static readonly WindowEntry[] Ventanas =
+    [
+        new(100, "Sin título - Bloc de notas", "Notepad", 1, 0, 0, 800, 600),
+        new(200, "notas.txt - Bloc de notas", "Notepad", 2, 0, 0, 800, 600),
+        new(300, "SnipShot - YouTube - Google Chrome", "chrome", 3, 0, 0, 1280, 720),
+        new(400, "SnipShot", "SnipShot", 4, 0, 0, 600, 300),
+    ];
+
+    private static long[] Elegir(ControlRequest peticion) =>
+        ControlProtocol.FindWindows(Ventanas, peticion).Select(v => v.Hwnd).ToArray();
+
+    [TestMethod]
+    public void PorHandle_EligeSoloEsaVentana()
+    {
+        CollectionAssert.AreEqual(new long[] { 300 }, Elegir(new ControlRequest { Hwnd = 300 }));
+    }
+
+    [TestMethod]
+    public void HandleInexistente_NoEligeNada()
+    {
+        Assert.IsEmpty(Elegir(new ControlRequest { Hwnd = 999 }));
+    }
+
+    [TestMethod]
+    [DataRow("bloc de NOTAS", new long[] { 100, 200 }, "subcadena sin distinguir mayúsculas")]
+    [DataRow("notas.txt", new long[] { 200 }, "subcadena única")]
+    [DataRow("SnipShot", new long[] { 300, 400 }, "el título de otra app puede contener el nombre buscado")]
+    [DataRow("Visual Studio", new long[0], "ninguna coincidencia")]
+    public void PorTitulo_BuscaSubcadena(string titulo, long[] esperadas, string caso)
+    {
+        CollectionAssert.AreEqual(esperadas, Elegir(new ControlRequest { Title = titulo }), caso);
+    }
+
+    [TestMethod]
+    [DataRow("notepad", new long[] { 100, 200 }, "sin distinguir mayúsculas")]
+    [DataRow("Notepad.exe", new long[] { 100, 200 }, "con extensión")]
+    [DataRow("chrome.EXE", new long[] { 300 }, "extensión en mayúsculas")]
+    [DataRow("snip", new long[0], "el proceso se compara entero, no por subcadena")]
+    public void PorProceso_ComparaElNombreCompleto(string proceso, long[] esperadas, string caso)
+    {
+        CollectionAssert.AreEqual(esperadas, Elegir(new ControlRequest { Process = proceso }), caso);
+    }
+
+    #endregion
+
     #region Respuestas
+
+    [TestMethod]
+    public void RespuestaAmbigua_LlevaLasVentanasCandidatas()
+    {
+        var enviada = new ControlResponse
+        {
+            Ok = false,
+            Error = new ControlError(ControlProtocol.ErrorCodes.Ambiguous, "Coinciden 2 ventanas"),
+            Windows = Ventanas[..2],
+        };
+
+        var recibida = ControlProtocol.ParseResponse(ControlProtocol.SerializeResponse(enviada));
+
+        Assert.IsNotNull(recibida?.Windows);
+        CollectionAssert.AreEqual(Ventanas[..2], recibida.Windows);
+        Assert.AreEqual(2, ControlProtocol.GetExitCode(recibida));
+    }
+
+    [TestMethod]
+    public void CapturaDeVentana_IncluyeLaVentanaCapturada()
+    {
+        var enviada = new ControlResponse { Ok = true, Capture = new CaptureResult(@"C:\a.png", 800, 600, "window") { Window = Ventanas[0] } };
+
+        var recibida = ControlProtocol.ParseResponse(ControlProtocol.SerializeResponse(enviada));
+
+        Assert.AreEqual(Ventanas[0], recibida?.Capture?.Window);
+    }
 
     [TestMethod]
     public void RespuestaDeCaptura_SobreviveAlViajeDeIdaYVuelta()
@@ -198,6 +298,8 @@ public class ControlProtocolTests
     [DataRow(ControlProtocol.ErrorCodes.InvalidRequest, 2)]
     [DataRow(ControlProtocol.ErrorCodes.UnsupportedVersion, 2)]
     [DataRow(ControlProtocol.ErrorCodes.UnknownCommand, 2)]
+    [DataRow(ControlProtocol.ErrorCodes.NotFound, 2)]
+    [DataRow(ControlProtocol.ErrorCodes.Ambiguous, 2)]
     [DataRow(ControlProtocol.ErrorCodes.NotRunning, 4)]
     [DataRow(ControlProtocol.ErrorCodes.AccessDenied, 4)]
     [DataRow(ControlProtocol.ErrorCodes.Disabled, 4)]

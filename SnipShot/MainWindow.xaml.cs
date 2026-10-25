@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
@@ -1006,6 +1007,9 @@ namespace SnipShot
                 case ControlProtocol.Commands.Capture:
                     return await CaptureForExternalControlAsync(request);
 
+                case ControlProtocol.Commands.ListWindows:
+                    return new ControlResponse { Ok = true, Windows = GetCaptureableWindowsForExternalControl() };
+
                 default:
                     return ControlResponse.Failure(
                         ControlProtocol.ErrorCodes.UnknownCommand, $"Comando desconocido: {request.Command}.");
@@ -1018,29 +1022,37 @@ namespace SnipShot
         /// </summary>
         private async Task<ControlResponse> CaptureForExternalControlAsync(ControlRequest request)
         {
-            SoftwareBitmap? bitmap = null;
-            async Task CaptureAsync() => bitmap = await _captureOrchestrator!.CaptureFullScreenAsync();
-
-            // ExecuteWithHiddenWindowAsync muestra la ventana al terminar. Si la app está en la
-            // bandeja no hay nada que ocultar, y usarlo la haría aparecer tras cada captura.
-            // Se pregunta a Win32 y no a AppWindow porque la bandeja oculta y restaura la ventana
-            // con ShowWindow, por debajo de AppWindow.
-            if (IsWindowVisible(WinRT.Interop.WindowNative.GetWindowHandle(this)))
+            WindowEntry? window = null;
+            if (request.Mode == ControlProtocol.CaptureModes.Window)
             {
-                await _windowVisibilityManager!.ExecuteWithHiddenWindowAsync(CaptureAsync, request.DelaySeconds);
-            }
-            else
-            {
-                if (request.DelaySeconds > 0)
+                var matches = ControlProtocol.FindWindows(GetCaptureableWindowsForExternalControl(), request);
+                if (matches.Length == 0)
                 {
-                    await Task.Delay(request.DelaySeconds * 1000);
+                    return ControlResponse.Failure(ControlProtocol.ErrorCodes.NotFound,
+                        "Ninguna ventana capturable coincide. Las minimizadas no se pueden capturar. "
+                        + "Usa snipshot list-windows para ver las disponibles.");
                 }
-                await CaptureAsync();
+                if (matches.Length > 1)
+                {
+                    return new ControlResponse
+                    {
+                        Ok = false,
+                        Error = new ControlError(ControlProtocol.ErrorCodes.Ambiguous,
+                            $"Coinciden {matches.Length} ventanas; repite la captura con --hwnd de la que quieras."),
+                        Windows = matches,
+                    };
+                }
+                window = matches[0];
             }
+
+            var bitmap = window is null
+                ? await CaptureScreenForExternalControlAsync(request.DelaySeconds)
+                : await CaptureWindowForExternalControlAsync(window, request.DelaySeconds);
 
             if (bitmap == null)
             {
-                return ControlResponse.Failure(ControlProtocol.ErrorCodes.Internal, "No se pudo capturar la pantalla.");
+                return ControlResponse.Failure(ControlProtocol.ErrorCodes.Internal,
+                    window is null ? "No se pudo capturar la pantalla." : $"No se pudo capturar la ventana {window.Hwnd}.");
             }
 
             using (bitmap)
@@ -1079,9 +1091,57 @@ namespace SnipShot
                 return new ControlResponse
                 {
                     Ok = true,
-                    Capture = new CaptureResult(path, bitmap.PixelWidth, bitmap.PixelHeight, request.Mode!),
+                    Capture = new CaptureResult(path, bitmap.PixelWidth, bitmap.PixelHeight, request.Mode!) { Window = window },
                 };
             }
+        }
+
+        private async Task<SoftwareBitmap?> CaptureScreenForExternalControlAsync(int delaySeconds)
+        {
+            SoftwareBitmap? bitmap = null;
+            async Task CaptureAsync() => bitmap = await _captureOrchestrator!.CaptureFullScreenAsync();
+
+            // ExecuteWithHiddenWindowAsync muestra la ventana al terminar. Si la app está en la
+            // bandeja no hay nada que ocultar, y usarlo la haría aparecer tras cada captura.
+            // Se pregunta a Win32 y no a AppWindow porque la bandeja oculta y restaura la ventana
+            // con ShowWindow, por debajo de AppWindow.
+            if (IsWindowVisible(WinRT.Interop.WindowNative.GetWindowHandle(this)))
+            {
+                await _windowVisibilityManager!.ExecuteWithHiddenWindowAsync(CaptureAsync, delaySeconds);
+            }
+            else
+            {
+                if (delaySeconds > 0)
+                {
+                    await Task.Delay(delaySeconds * 1000);
+                }
+                await CaptureAsync();
+            }
+
+            return bitmap;
+        }
+
+        /// <summary>
+        /// PrintWindow solo dibuja la ventana pedida, así que no hace falta ocultar SnipShot.
+        /// </summary>
+        private async Task<SoftwareBitmap?> CaptureWindowForExternalControlAsync(WindowEntry window, int delaySeconds)
+        {
+            if (delaySeconds > 0)
+            {
+                await Task.Delay(delaySeconds * 1000);
+            }
+
+            return await _captureOrchestrator!.CaptureWindowByHandleAsync(new IntPtr(window.Hwnd));
+        }
+
+        private WindowEntry[] GetCaptureableWindowsForExternalControl()
+        {
+            var appWindowHandle = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            return WindowEnumerationHelper.GetCaptureableWindows(appWindowHandle, includeOwnWindow: true)
+                .Select(w => new WindowEntry(
+                    w.Handle.ToInt64(), w.Title, w.ProcessName, w.ProcessId,
+                    w.Bounds.X, w.Bounds.Y, w.Bounds.Width, w.Bounds.Height))
+                .ToArray();
         }
 
         private void HideToTray()
