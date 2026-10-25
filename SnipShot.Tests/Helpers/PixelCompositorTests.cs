@@ -50,6 +50,52 @@ public class PixelCompositorTests
     }
 
     [TestMethod]
+    public void CapaTransparente_NoCambiaLaImagen()
+    {
+        var capa = new byte[10 * 8 * 4];
+
+        CollectionAssert.AreEqual(
+            PixelCompositor.Crop(Imagen(10, 8), 10, 8, 1, 1, 5, 5),
+            PixelCompositor.Crop(Imagen(10, 8), 10, 8, 1, 1, 5, 5, capa, 10, 8));
+    }
+
+    [TestMethod]
+    public void AnotacionOpaca_SustituyeAlFondoEnSuPosicion()
+    {
+        var capa = new byte[10 * 8 * 4];
+        int i = (3 * 10 + 4) * 4; // (4, 3)
+        capa[i + 2] = 255; capa[i + 3] = 255;
+
+        var recorte = PixelCompositor.Crop(Imagen(10, 8), 10, 8, 2, 2, 5, 5, capa, 10, 8);
+
+        CollectionAssert.AreEqual(new byte[] { 0, 0, 255, 255 }, Pixel(recorte, 5, 2, 1), "la anotación se pinta en su posición de pantalla");
+        CollectionAssert.AreEqual(new byte[] { 3, 3, 0, 255 }, Pixel(recorte, 5, 1, 1), "los píxeles vecinos siguen siendo fondo");
+    }
+
+    [TestMethod]
+    public void AnotacionSemitransparente_SeMezclaConAlfaPremultiplicado()
+    {
+        // Fondo blanco opaco y rojo al 50 % premultiplicado (R = 128, A = 128).
+        var fondo = Enumerable.Repeat((byte)255, 4).ToArray();
+        var capa = new byte[] { 0, 0, 128, 128 };
+
+        // Resultado = capa + fondo * (1 - 128/255) ≈ capa + 127.
+        CollectionAssert.AreEqual(new byte[] { 127, 127, 255, 255 }, PixelCompositor.Crop(fondo, 1, 1, 0, 0, 1, 1, capa, 1, 1));
+    }
+
+    [TestMethod]
+    public void CapaMasPequenaQueLaImagen_SeIgnoraFueraDeSusLimites()
+    {
+        // RenderTargetBitmap puede devolver unos píxeles menos que el fondo por redondeo.
+        var capa = Enumerable.Repeat((byte)200, 2 * 2 * 4).ToArray();
+
+        var recorte = PixelCompositor.Crop(Imagen(4, 4), 4, 4, 0, 0, 4, 4, capa, 2, 2);
+
+        CollectionAssert.AreEqual(new byte[] { 200, 200, 200, 255 }, Pixel(recorte, 4, 1, 1), "dentro de la capa");
+        CollectionAssert.AreEqual(new byte[] { 3, 3, 0, 255 }, Pixel(recorte, 4, 3, 3), "fuera de la capa queda la imagen");
+    }
+
+    [TestMethod]
     [DataRow(-1, 0, 2, 2, "x negativa")]
     [DataRow(0, 0, 0, 2, "ancho cero")]
     [DataRow(3, 0, 2, 2, "se sale por la derecha")]
