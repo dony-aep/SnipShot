@@ -219,6 +219,33 @@
                                               Toggled="StartWithWindowsToggle_Toggled"/>
                             </Grid>
                         </Border>
+
+                        <!-- Control externo desde el comando snipshot -->
+                        <Border Background="{ThemeResource ExpanderHeaderBackground}"
+                                BorderBrush="{ThemeResource ExpanderHeaderBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="16,12,60,12">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="Permitir control externo"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock Text="El comando snipshot podrá pedir capturas desde la terminal o un agente"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               FontSize="12"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+
+                                <ToggleSwitch x:Name="ExternalControlToggle" AutomationProperties.AutomationId="ExternalControlToggle"
+                                              Grid.Column="1"
+                                              HorizontalAlignment="Right"
+                                              OnContent="Activado"
+                                              OffContent="Desactivado"
+                                              Margin="0"
+                                              Toggled="ExternalControlToggle_Toggled"/>
+                            </Grid>
+                        </Border>
                     </StackPanel>
                 </StackPanel>
 

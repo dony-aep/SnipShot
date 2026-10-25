@@ -110,13 +110,13 @@ public class ControlProtocolTests
     [TestMethod]
     public void RespuestaDeError_ConservaCodigoYMensaje_YOmiteLosDatos()
     {
-        var linea = ControlProtocol.SerializeResponse(ControlResponse.Failure(ControlProtocol.ErrorCodes.Disabled, "Control externo desactivado"));
+        var linea = ControlProtocol.SerializeResponse(ControlResponse.Failure(ControlProtocol.ErrorCodes.NotRunning, "SnipShot no está abierto"));
 
         var recibida = ControlProtocol.ParseResponse(linea);
 
         Assert.IsNotNull(recibida);
         Assert.IsFalse(recibida.Ok);
-        Assert.AreEqual(new ControlError(ControlProtocol.ErrorCodes.Disabled, "Control externo desactivado"), recibida.Error);
+        Assert.AreEqual(new ControlError(ControlProtocol.ErrorCodes.NotRunning, "SnipShot no está abierto"), recibida.Error);
         Assert.DoesNotContain("\"status\"", linea, "un campo nulo no debería escribirse");
     }
 
@@ -140,7 +140,6 @@ public class ControlProtocolTests
     [DataRow(ControlProtocol.ErrorCodes.UnknownCommand, 2)]
     [DataRow(ControlProtocol.ErrorCodes.NotRunning, 4)]
     [DataRow(ControlProtocol.ErrorCodes.AccessDenied, 4)]
-    [DataRow(ControlProtocol.ErrorCodes.Disabled, 4)]
     [DataRow(ControlProtocol.ErrorCodes.Internal, 1)]
     [DataRow("codigo_que_no_existe", 1)]
     public void CodigoDeError_SeTraduceAlCodigoDeSalidaDocumentado(string codigo, int salida)

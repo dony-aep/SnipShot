@@ -219,6 +219,7 @@ namespace SnipShot
             SettingsView.CtrlShiftSHotkeyChanged += SettingsView_CtrlShiftSHotkeyChanged;
             SettingsView.MinimizeToTrayChanged += SettingsView_MinimizeToTrayChanged;
             SettingsView.StartWithWindowsChanged += SettingsView_StartWithWindowsChanged;
+            SettingsView.ExternalControlChanged += SettingsView_ExternalControlChanged;
 
             // Inicializar el servicio de System Tray nativo (sin H.NotifyIcon para mejor rendimiento)
             _systemTrayService = new NativeSystemTrayService(this);
@@ -228,7 +229,12 @@ namespace SnipShot
             _systemTrayService.Initialize();
 
             _externalControlService = new ExternalControlService(DispatcherQueue, HandleExternalControlRequestAsync);
-            _externalControlService.Start();
+            var externalControlEnabled = _settingsService.GetExternalControlEnabled();
+            SettingsView.SetExternalControlPreference(externalControlEnabled);
+            if (externalControlEnabled)
+            {
+                _externalControlService.Start();
+            }
 
             // Configurar evento de cierre para minimizar al tray
             this.Closed += MainWindow_Closed;
@@ -918,6 +924,22 @@ namespace SnipShot
         {
             _minimizeToTray = enabled;
             _settingsService?.SaveMinimizeToTrayEnabled(enabled);
+        }
+
+        private void SettingsView_ExternalControlChanged(object? sender, bool enabled)
+        {
+            // Sin pipe abierto no hay nada que pueda conectarse, así que desactivar la opción
+            // basta para que el comando snipshot deje de tener efecto.
+            if (enabled)
+            {
+                _externalControlService?.Start();
+            }
+            else
+            {
+                _externalControlService?.Stop();
+            }
+
+            _settingsService?.SaveExternalControlEnabled(enabled);
         }
 
         private async void SettingsView_StartWithWindowsChanged(object? sender, bool enabled)
