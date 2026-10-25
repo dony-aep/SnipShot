@@ -1,4 +1,6 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -24,7 +26,15 @@ namespace SnipShot.Services
         public static class Commands
         {
             public const string Status = "status";
+            public const string Capture = "capture";
         }
+
+        public static class CaptureModes
+        {
+            public const string FullScreen = "fullscreen";
+        }
+
+        public const int MaxDelaySeconds = 30;
 
         public static class ErrorCodes
         {
@@ -81,15 +91,53 @@ namespace SnipShot.Services
                 return false;
             }
 
-            if (parsed.Command != Commands.Status)
+            error = parsed.Command switch
             {
-                error = new ControlError(ErrorCodes.UnknownCommand, $"Comando desconocido: {parsed.Command}.");
+                Commands.Status => null,
+                Commands.Capture => ValidateCapture(parsed),
+                _ => new ControlError(ErrorCodes.UnknownCommand, $"Comando desconocido: {parsed.Command}."),
+            };
+
+            if (error is not null)
+            {
                 return false;
             }
 
             request = parsed;
-            error = null;
             return true;
+        }
+
+        private static ControlError? ValidateCapture(ControlRequest request)
+        {
+            if (request.Mode != CaptureModes.FullScreen)
+            {
+                return new ControlError(ErrorCodes.InvalidRequest,
+                    request.Mode is null
+                        ? $"Falta el modo de captura. Modos disponibles: {CaptureModes.FullScreen}."
+                        : $"Modo de captura no admitido: {request.Mode}. Modos disponibles: {CaptureModes.FullScreen}.");
+            }
+
+            if (request.DelaySeconds is < 0 or > MaxDelaySeconds)
+            {
+                return new ControlError(ErrorCodes.InvalidRequest, $"El retardo debe estar entre 0 y {MaxDelaySeconds} segundos.");
+            }
+
+            if (request.Out is not null)
+            {
+                // La app tiene otro directorio de trabajo que el CLI: una ruta relativa acabaría
+                // en otra carpeta. El CLI la resuelve antes de enviarla.
+                if (!Path.IsPathFullyQualified(request.Out))
+                {
+                    return new ControlError(ErrorCodes.InvalidRequest, $"La ruta de salida debe ser absoluta: {request.Out}.");
+                }
+
+                if (!request.Out.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new ControlError(ErrorCodes.InvalidRequest, $"La captura se guarda como PNG; la ruta debe terminar en .png: {request.Out}.");
+                }
+            }
+
+            return null;
         }
 
         public static string SerializeResponse(ControlResponse response) =>
@@ -142,6 +190,18 @@ namespace SnipShot.Services
 
         [JsonRequired]
         public string Command { get; init; } = string.Empty;
+
+        // Opciones de capture; el resto de comandos las ignora.
+        public string? Mode { get; init; }
+
+        /// <summary>
+        /// Ruta absoluta del PNG. Sin ella se guarda en la carpeta de autoguardado.
+        /// </summary>
+        public string? Out { get; init; }
+
+        public bool Clipboard { get; init; }
+
+        public int DelaySeconds { get; init; }
     }
 
     internal sealed class ControlResponse
@@ -154,6 +214,8 @@ namespace SnipShot.Services
         public ControlError? Error { get; init; }
 
         public StatusInfo? Status { get; init; }
+
+        public CaptureResult? Capture { get; init; }
 
         public static ControlResponse Failure(string code, string message) =>
             new() { Ok = false, Error = new ControlError(code, message) };
@@ -168,6 +230,11 @@ namespace SnipShot.Services
     /// Datos de la instancia en ejecución que devuelve el comando <c>status</c>.
     /// </summary>
     internal sealed record StatusInfo(string AppVersion, int ProcessId, string AutoSaveFolder);
+
+    /// <summary>
+    /// Captura guardada: ruta del PNG y tamaño en píxeles.
+    /// </summary>
+    internal sealed record CaptureResult(string Path, int Width, int Height, string Mode);
 
     [JsonSourceGenerationOptions(
         PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,

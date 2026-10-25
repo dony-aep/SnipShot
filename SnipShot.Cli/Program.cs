@@ -15,14 +15,15 @@ namespace SnipShot.Cli
         // Si el pipe no existe, Connect espera hasta agotar este plazo: es lo que tarda en
         // responder "no está abierto". Basta con poco porque la app crea el pipe al arrancar.
         private const int ConnectTimeoutMs = 1500;
-        private static readonly TimeSpan ResponseTimeout = TimeSpan.FromSeconds(10);
+        // Margen sobre el retardo que pida la captura: ocultar la ventana y guardar el PNG.
+        private static readonly TimeSpan ResponseTimeout = TimeSpan.FromSeconds(30);
         private static readonly UTF8Encoding Utf8WithoutBom = new(false);
 
         private static async Task<int> Main(string[] args)
         {
-            ControlResponse response = args is [ControlProtocol.Commands.Status]
-                ? await SendAsync(new ControlRequest { Command = ControlProtocol.Commands.Status })
-                : ControlResponse.Failure(ControlProtocol.ErrorCodes.InvalidRequest, "Uso: snipshot status");
+            ControlResponse response = CliArguments.TryParse(args, Environment.CurrentDirectory, out var request, out var usageError)
+                ? await SendAsync(request)
+                : ControlResponse.Failure(ControlProtocol.ErrorCodes.InvalidRequest, usageError);
 
             Console.WriteLine(ControlProtocol.SerializeResponse(response));
             return ControlProtocol.GetExitCode(response);
@@ -52,7 +53,7 @@ namespace SnipShot.Cli
             using var writer = new StreamWriter(client, Utf8WithoutBom, 1024, leaveOpen: true) { AutoFlush = true };
             using var reader = new StreamReader(client, Utf8WithoutBom, false, 1024, leaveOpen: true);
 
-            using var timeout = new CancellationTokenSource(ResponseTimeout);
+            using var timeout = new CancellationTokenSource(ResponseTimeout + TimeSpan.FromSeconds(request.DelaySeconds));
             try
             {
                 await writer.WriteLineAsync(ControlProtocol.SerializeRequest(request));

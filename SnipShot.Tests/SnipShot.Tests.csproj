@@ -34,6 +34,7 @@
   <ItemGroup>
     <Compile Include="..\SnipShot\Services\UpdateService.cs" Link="Fuentes\UpdateService.cs" />
     <Compile Include="..\SnipShot\Services\ControlProtocol.cs" Link="Fuentes\ControlProtocol.cs" />
+    <Compile Include="..\SnipShot.Cli\CliArguments.cs" Link="Fuentes\CliArguments.cs" />
   </ItemGroup>
 
   <ItemGroup>

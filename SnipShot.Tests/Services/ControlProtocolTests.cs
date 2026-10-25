@@ -83,7 +83,7 @@ public class ControlProtocolTests
     }
 
     [TestMethod]
-    [DataRow("capture", "comando que no existe todavía")]
+    [DataRow("borrar-todo", "comando que no existe")]
     [DataRow("STATUS", "los comandos distinguen mayúsculas")]
     public void ComandoDesconocido_SeRechazaConSuPropioCodigo(string comando, string motivo)
     {
@@ -92,7 +92,67 @@ public class ControlProtocolTests
 
     #endregion
 
+    #region Capturas
+
+    private static string Captura(string campos) => $"{{\"version\":1,\"command\":\"capture\",{campos}}}";
+
+    [TestMethod]
+    [DataRow("\"mode\":\"fullscreen\"", "solo el modo")]
+    [DataRow("\"mode\":\"fullscreen\",\"out\":\"C:\\\\Capturas\\\\a.png\"", "con ruta absoluta")]
+    [DataRow("\"mode\":\"fullscreen\",\"out\":\"C:\\\\Capturas\\\\a.PNG\"", "la extensión no distingue mayúsculas")]
+    [DataRow("\"mode\":\"fullscreen\",\"delaySeconds\":30,\"clipboard\":true", "retardo máximo y portapapeles")]
+    public void CapturaValida_SeAcepta(string campos, string caso)
+    {
+        Assert.IsTrue(ControlProtocol.TryParseRequest(Captura(campos), out var peticion, out var error), $"{caso}: {error?.Message}");
+        Assert.AreEqual(ControlProtocol.CaptureModes.FullScreen, peticion.Mode);
+    }
+
+    [TestMethod]
+    [DataRow("\"clipboard\":true", "sin modo")]
+    [DataRow("\"mode\":\"pantalla\"", "modo inexistente")]
+    [DataRow("\"mode\":\"FullScreen\"", "los modos distinguen mayúsculas")]
+    [DataRow("\"mode\":\"fullscreen\",\"delaySeconds\":-1", "retardo negativo")]
+    [DataRow("\"mode\":\"fullscreen\",\"delaySeconds\":31", "retardo por encima del máximo")]
+    [DataRow("\"mode\":\"fullscreen\",\"out\":\"capturas\\\\a.png\"", "ruta relativa: la app tiene otro directorio de trabajo")]
+    [DataRow("\"mode\":\"fullscreen\",\"out\":\"\\\\capturas\\\\a.png\"", "ruta relativa a la unidad actual")]
+    [DataRow("\"mode\":\"fullscreen\",\"out\":\"C:\\\\Capturas\\\\a.jpg\"", "extensión que no es png")]
+    public void CapturaConOpcionesInvalidas_EsPeticionInvalida(string campos, string motivo)
+    {
+        AssertRechazada(Captura(campos), ControlProtocol.ErrorCodes.InvalidRequest, motivo);
+    }
+
+    [TestMethod]
+    public void PeticionDeCapturaDelCli_ConservaSusOpciones()
+    {
+        var enviada = new ControlRequest
+        {
+            Command = ControlProtocol.Commands.Capture,
+            Mode = ControlProtocol.CaptureModes.FullScreen,
+            Out = @"D:\salida\captura.png",
+            Clipboard = true,
+            DelaySeconds = 3,
+        };
+
+        Assert.IsTrue(ControlProtocol.TryParseRequest(ControlProtocol.SerializeRequest(enviada), out var recibida, out _));
+        Assert.AreEqual(enviada.Out, recibida.Out);
+        Assert.IsTrue(recibida.Clipboard);
+        Assert.AreEqual(3, recibida.DelaySeconds);
+    }
+
+    #endregion
+
     #region Respuestas
+
+    [TestMethod]
+    public void RespuestaDeCaptura_SobreviveAlViajeDeIdaYVuelta()
+    {
+        var enviada = new ControlResponse { Ok = true, Capture = new CaptureResult(@"C:\Users\x\Pictures\SnipShot\a.png", 3840, 1080, "fullscreen") };
+
+        var recibida = ControlProtocol.ParseResponse(ControlProtocol.SerializeResponse(enviada));
+
+        Assert.IsNotNull(recibida);
+        Assert.AreEqual(enviada.Capture, recibida.Capture);
+    }
 
     [TestMethod]
     public void RespuestaDeStatus_SobreviveAlViajeDeIdaYVuelta()

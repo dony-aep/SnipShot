@@ -992,7 +992,7 @@ namespace SnipShot
         /// <summary>
         /// Atiende las peticiones del comando snipshot. Se ejecuta en el hilo de UI.
         /// </summary>
-        private Task<ControlResponse> HandleExternalControlRequestAsync(ControlRequest request)
+        private async Task<ControlResponse> HandleExternalControlRequestAsync(ControlRequest request)
         {
             switch (request.Command)
             {
@@ -1001,11 +1001,86 @@ namespace SnipShot
                         UpdateService.CurrentVersion.ToString(),
                         Environment.ProcessId,
                         _autoSaveManager!.AutoSaveFolderPath);
-                    return Task.FromResult(new ControlResponse { Ok = true, Status = status });
+                    return new ControlResponse { Ok = true, Status = status };
+
+                case ControlProtocol.Commands.Capture:
+                    return await CaptureForExternalControlAsync(request);
 
                 default:
-                    return Task.FromResult(ControlResponse.Failure(
-                        ControlProtocol.ErrorCodes.UnknownCommand, $"Comando desconocido: {request.Command}."));
+                    return ControlResponse.Failure(
+                        ControlProtocol.ErrorCodes.UnknownCommand, $"Comando desconocido: {request.Command}.");
+            }
+        }
+
+        /// <summary>
+        /// Captura para el comando snipshot: guarda el PNG y devuelve su ruta, sin abrir el
+        /// editor ni cambiar el estado de la ventana.
+        /// </summary>
+        private async Task<ControlResponse> CaptureForExternalControlAsync(ControlRequest request)
+        {
+            SoftwareBitmap? bitmap = null;
+            async Task CaptureAsync() => bitmap = await _captureOrchestrator!.CaptureFullScreenAsync();
+
+            // ExecuteWithHiddenWindowAsync muestra la ventana al terminar. Si la app está en la
+            // bandeja no hay nada que ocultar, y usarlo la haría aparecer tras cada captura.
+            // Se pregunta a Win32 y no a AppWindow porque la bandeja oculta y restaura la ventana
+            // con ShowWindow, por debajo de AppWindow.
+            if (IsWindowVisible(WinRT.Interop.WindowNative.GetWindowHandle(this)))
+            {
+                await _windowVisibilityManager!.ExecuteWithHiddenWindowAsync(CaptureAsync, request.DelaySeconds);
+            }
+            else
+            {
+                if (request.DelaySeconds > 0)
+                {
+                    await Task.Delay(request.DelaySeconds * 1000);
+                }
+                await CaptureAsync();
+            }
+
+            if (bitmap == null)
+            {
+                return ControlResponse.Failure(ControlProtocol.ErrorCodes.Internal, "No se pudo capturar la pantalla.");
+            }
+
+            using (bitmap)
+            {
+                string path;
+                try
+                {
+                    if (request.Out is { } outPath)
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
+                        using var stream = new FileStream(outPath, FileMode.Create, FileAccess.ReadWrite);
+                        await AutoSaveManager.EncodePngAsync(bitmap, stream.AsRandomAccessStream());
+                        path = outPath;
+                    }
+                    else
+                    {
+                        var folder = await _autoSaveManager!.GetAutoSaveFolderAsync();
+                        if (folder == null)
+                        {
+                            return ControlResponse.Failure(ControlProtocol.ErrorCodes.Internal,
+                                $"No se encontró la carpeta de autoguardado: {_autoSaveManager.AutoSaveFolderPath}.");
+                        }
+                        path = await AutoSaveManager.SaveToFolderAsync(bitmap, folder);
+                    }
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    return ControlResponse.Failure(ControlProtocol.ErrorCodes.Internal, $"No se pudo guardar la captura: {ex.Message}");
+                }
+
+                if (request.Clipboard)
+                {
+                    await ClipboardHelper.CopyImageToClipboardAsync(bitmap);
+                }
+
+                return new ControlResponse
+                {
+                    Ok = true,
+                    Capture = new CaptureResult(path, bitmap.PixelWidth, bitmap.PixelHeight, request.Mode!),
+                };
             }
         }
 
