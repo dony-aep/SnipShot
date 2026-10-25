@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Shapes;
 using Microsoft.UI.Input;
 using System;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Graphics;
@@ -1302,7 +1303,6 @@ namespace SnipShot.Features.Capture.Modes.Rectangular
             CollapseStyleToolbar();
             CoordinatesDisplay.Visibility = Visibility.Collapsed;
             SelectionBorder.Visibility = Visibility.Collapsed;
-            SetShadeVisibility(false);
 
             await Task.Yield();
         }
@@ -1313,6 +1313,70 @@ namespace SnipShot.Features.Capture.Modes.Rectangular
             {
                 return null;
             }
+
+            return ShapesCanvas.Children.Count > 0
+                ? await CaptureSelectionWithAnnotationsAsync(rect)
+                : await CropSelectionFromBackgroundAsync(rect);
+        }
+
+        /// <summary>
+        /// Sin anotaciones basta con recortar el fondo congelado, sin tocar nada en pantalla.
+        /// Renderizar el overlay, como se hace con anotaciones, lo hace desaparecer y volver un
+        /// instante antes de cerrarse.
+        /// </summary>
+        private async Task<SoftwareBitmap?> CropSelectionFromBackgroundAsync(RectInt32 rect)
+        {
+            SoftwareBitmap background = BackgroundBitmap!;
+            if (background.BitmapPixelFormat != BitmapPixelFormat.Bgra8 ||
+                background.BitmapAlphaMode != BitmapAlphaMode.Premultiplied)
+            {
+                background = SoftwareBitmap.Convert(background, BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied);
+            }
+
+            SoftwareBitmap selection;
+            try
+            {
+                int x = Math.Clamp(rect.X - VirtualBounds.X, 0, background.PixelWidth - 1);
+                int y = Math.Clamp(rect.Y - VirtualBounds.Y, 0, background.PixelHeight - 1);
+                int width = Math.Min(rect.Width, background.PixelWidth - x);
+                int height = Math.Min(rect.Height, background.PixelHeight - y);
+
+                var pixels = new byte[background.PixelWidth * background.PixelHeight * 4];
+                background.CopyToBuffer(pixels.AsBuffer());
+                var cropped = PixelCompositor.Crop(pixels, background.PixelWidth, background.PixelHeight, x, y, width, height);
+
+                selection = SoftwareBitmap.CreateCopyFromBuffer(
+                    cropped.AsBuffer(), BitmapPixelFormat.Bgra8, width, height, BitmapAlphaMode.Premultiplied);
+            }
+            finally
+            {
+                if (!ReferenceEquals(background, BackgroundBitmap))
+                {
+                    background.Dispose();
+                }
+            }
+
+            if (!_borderEnabled)
+            {
+                return selection;
+            }
+
+            var withBorder = await BorderHelper.ApplyBorderAsync(selection, _borderColorHex, _borderThickness);
+            if (withBorder != null && !ReferenceEquals(withBorder, selection))
+            {
+                selection.Dispose();
+                return withBorder;
+            }
+            return selection;
+        }
+
+        /// <summary>
+        /// Con anotaciones se renderiza el overlay entero con el fondo insertado detrás. Las
+        /// sombras se quitan para que no salgan en la imagen.
+        /// </summary>
+        private async Task<SoftwareBitmap?> CaptureSelectionWithAnnotationsAsync(RectInt32 rect)
+        {
+            SetShadeVisibility(false);
 
             try
             {
