@@ -593,8 +593,11 @@ namespace SnipShot
 
         private async Task<SoftwareBitmap?> CaptureWindowAsync(IntPtr appWindowHandle)
         {
-            // Enumerar ventanas ANTES de ocultar la aplicación para incluirla en la lista
-            var availableWindows = WindowEnumerationHelper.GetCaptureableWindows(appWindowHandle, includeOwnWindow: true);
+            // Enumerar ventanas ANTES de ocultar la aplicación. Solo se ofrece la propia app si va a
+            // seguir visible: el overlay recorta del fondo capturado, y con la app oculta el
+            // recorte mostraría lo que hay detrás de ella.
+            var availableWindows = WindowEnumerationHelper.GetCaptureableWindows(
+                appWindowHandle, includeOwnWindow: !_windowVisibilityManager!.HideOnCapture);
 
             if (availableWindows.Count == 0)
             {
