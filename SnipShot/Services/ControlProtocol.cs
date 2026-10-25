@@ -36,6 +36,12 @@ namespace SnipShot.Services
 
         public const int MaxDelaySeconds = 30;
 
+        /// <summary>
+        /// Argumento con el que el CLI arranca la app cuando está cerrada: la deja en la
+        /// bandeja, como el inicio con Windows, en vez de abrir la ventana.
+        /// </summary>
+        public const string BackgroundLaunchArgument = "--background";
+
         public static class ErrorCodes
         {
             public const string InvalidRequest = "invalid_request";
@@ -43,6 +49,7 @@ namespace SnipShot.Services
             public const string UnknownCommand = "unknown_command";
             public const string NotRunning = "not_running";
             public const string AccessDenied = "access_denied";
+            public const string Disabled = "disabled";
             public const string Internal = "internal";
         }
 
@@ -177,7 +184,7 @@ namespace SnipShot.Services
             return response.Error?.Code switch
             {
                 ErrorCodes.InvalidRequest or ErrorCodes.UnsupportedVersion or ErrorCodes.UnknownCommand => 2,
-                ErrorCodes.NotRunning or ErrorCodes.AccessDenied => 4,
+                ErrorCodes.NotRunning or ErrorCodes.AccessDenied or ErrorCodes.Disabled => 4,
                 _ => 1,
             };
         }

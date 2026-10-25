@@ -200,6 +200,7 @@ public class ControlProtocolTests
     [DataRow(ControlProtocol.ErrorCodes.UnknownCommand, 2)]
     [DataRow(ControlProtocol.ErrorCodes.NotRunning, 4)]
     [DataRow(ControlProtocol.ErrorCodes.AccessDenied, 4)]
+    [DataRow(ControlProtocol.ErrorCodes.Disabled, 4)]
     [DataRow(ControlProtocol.ErrorCodes.Internal, 1)]
     [DataRow("codigo_que_no_existe", 1)]
     public void CodigoDeError_SeTraduceAlCodigoDeSalidaDocumentado(string codigo, int salida)
