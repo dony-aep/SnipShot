@@ -685,6 +685,9 @@ namespace SnipShot
                 return;
             }
 
+            // «Nueva captura» desde el botón o la bandeja lleva la captura al editor, así que la
+            // ventana tiene que verse aunque la app estuviera en la bandeja o minimizada.
+            ShowFromTray();
             await ShowCapturePreview(bitmap, true);
         }
 
@@ -1149,25 +1152,7 @@ namespace SnipShot
         private async Task<SoftwareBitmap?> CaptureWithAppHiddenAsync(Func<Task<SoftwareBitmap?>> capture, int delaySeconds)
         {
             SoftwareBitmap? bitmap = null;
-            async Task CaptureAsync() => bitmap = await capture();
-
-            // ExecuteWithHiddenWindowAsync muestra la ventana al terminar. Si la app está en la
-            // bandeja no hay nada que ocultar, y usarlo la haría aparecer tras cada captura.
-            // Se pregunta a Win32 y no a AppWindow porque la bandeja oculta y restaura la ventana
-            // con ShowWindow, por debajo de AppWindow.
-            if (IsWindowVisible(WinRT.Interop.WindowNative.GetWindowHandle(this)))
-            {
-                await _windowVisibilityManager!.ExecuteWithHiddenWindowAsync(CaptureAsync, delaySeconds);
-            }
-            else
-            {
-                if (delaySeconds > 0)
-                {
-                    await Task.Delay(delaySeconds * 1000);
-                }
-                await CaptureAsync();
-            }
-
+            await _windowVisibilityManager!.ExecuteWithHiddenWindowAsync(async () => bitmap = await capture(), delaySeconds);
             return bitmap;
         }
 

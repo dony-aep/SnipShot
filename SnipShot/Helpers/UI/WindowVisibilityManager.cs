@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
+using static SnipShot.Models.NativeMethods;
 
 namespace SnipShot.Helpers.UI
 {
@@ -47,8 +48,14 @@ namespace SnipShot.Helpers.UI
             if (captureAction == null)
                 throw new ArgumentNullException(nameof(captureAction));
 
-            // Si no debe ocultarse, ejecutar directamente sin ocultar
-            if (!_hideOnCapture)
+            // Una ventana en la bandeja o minimizada no sale en la captura: no hay que ocultarla,
+            // y mostrarla al terminar la sacaría a la vista sin que nadie lo pidiera (p. ej., tras
+            // una captura con atajo que solo va al portapapeles). Se pregunta a Win32 porque la
+            // bandeja oculta la ventana con ShowWindow, por debajo de AppWindow.
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(_window);
+            var isOnScreen = IsWindowVisible(hwnd) && !IsIconic(hwnd);
+
+            if (!_hideOnCapture || !isOnScreen)
             {
                 // Aplicar el delay configurado por el usuario si es mayor a 0
                 if (userDelaySeconds > 0)
