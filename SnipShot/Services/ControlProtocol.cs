@@ -32,6 +32,7 @@ namespace SnipShot.Services
             public const string UnsupportedVersion = "unsupported_version";
             public const string UnknownCommand = "unknown_command";
             public const string NotRunning = "not_running";
+            public const string AccessDenied = "access_denied";
             public const string Disabled = "disabled";
             public const string Internal = "internal";
         }
@@ -129,7 +130,7 @@ namespace SnipShot.Services
             return response.Error?.Code switch
             {
                 ErrorCodes.InvalidRequest or ErrorCodes.UnsupportedVersion or ErrorCodes.UnknownCommand => 2,
-                ErrorCodes.NotRunning or ErrorCodes.Disabled => 4,
+                ErrorCodes.NotRunning or ErrorCodes.AccessDenied or ErrorCodes.Disabled => 4,
                 _ => 1,
             };
         }

@@ -92,6 +92,7 @@ namespace SnipShot
         private UIStateManager? _uiStateManager;
         private HotkeyService? _hotkeyService;
         private NativeSystemTrayService? _systemTrayService;
+        private ExternalControlService? _externalControlService;
         private bool _isReallyClosing;
         private bool _minimizeToTray = true;
         private string? _currentDisplayedFilePath;
@@ -225,6 +226,9 @@ namespace SnipShot
             _systemTrayService.CaptureRequested += SystemTrayService_CaptureRequested;
             _systemTrayService.ExitRequested += SystemTrayService_ExitRequested;
             _systemTrayService.Initialize();
+
+            _externalControlService = new ExternalControlService(DispatcherQueue, HandleExternalControlRequestAsync);
+            _externalControlService.Start();
 
             // Configurar evento de cierre para minimizar al tray
             this.Closed += MainWindow_Closed;
@@ -959,6 +963,27 @@ namespace SnipShot
                 // Limpieza al cerrar realmente
                 _systemTrayService?.Dispose();
                 _hotkeyService?.Dispose();
+                _externalControlService?.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Atiende las peticiones del comando snipshot. Se ejecuta en el hilo de UI.
+        /// </summary>
+        private Task<ControlResponse> HandleExternalControlRequestAsync(ControlRequest request)
+        {
+            switch (request.Command)
+            {
+                case ControlProtocol.Commands.Status:
+                    var status = new StatusInfo(
+                        UpdateService.CurrentVersion.ToString(),
+                        Environment.ProcessId,
+                        _autoSaveManager!.AutoSaveFolderPath);
+                    return Task.FromResult(new ControlResponse { Ok = true, Status = status });
+
+                default:
+                    return Task.FromResult(ControlResponse.Failure(
+                        ControlProtocol.ErrorCodes.UnknownCommand, $"Comando desconocido: {request.Command}."));
             }
         }
 

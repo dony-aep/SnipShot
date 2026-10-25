@@ -12,9 +12,7 @@ public class ControlProtocolTests
 {
     private static void AssertRechazada(string? linea, string codigoEsperado, string motivo)
     {
-        var aceptada = ControlProtocol.TryParseRequest(linea, out var peticion, out var error);
-
-        Assert.IsFalse(aceptada, motivo);
+        Assert.IsFalse(ControlProtocol.TryParseRequest(linea, out var peticion, out var error), motivo);
         Assert.IsNull(peticion, motivo);
         Assert.AreEqual(codigoEsperado, error.Code, motivo);
     }
@@ -24,9 +22,7 @@ public class ControlProtocolTests
     [TestMethod]
     public void PeticionStatus_SeAcepta()
     {
-        var aceptada = ControlProtocol.TryParseRequest("{\"version\":1,\"command\":\"status\"}", out var peticion, out _);
-
-        Assert.IsTrue(aceptada);
+        Assert.IsTrue(ControlProtocol.TryParseRequest("{\"version\":1,\"command\":\"status\"}", out var peticion, out _));
         Assert.AreEqual(ControlProtocol.Commands.Status, peticion.Command);
     }
 
@@ -121,7 +117,7 @@ public class ControlProtocolTests
         Assert.IsNotNull(recibida);
         Assert.IsFalse(recibida.Ok);
         Assert.AreEqual(new ControlError(ControlProtocol.ErrorCodes.Disabled, "Control externo desactivado"), recibida.Error);
-        Assert.IsFalse(linea.Contains("\"status\""), "un campo nulo no debería escribirse: " + linea);
+        Assert.DoesNotContain("\"status\"", linea, "un campo nulo no debería escribirse");
     }
 
     [TestMethod]
@@ -143,6 +139,7 @@ public class ControlProtocolTests
     [DataRow(ControlProtocol.ErrorCodes.UnsupportedVersion, 2)]
     [DataRow(ControlProtocol.ErrorCodes.UnknownCommand, 2)]
     [DataRow(ControlProtocol.ErrorCodes.NotRunning, 4)]
+    [DataRow(ControlProtocol.ErrorCodes.AccessDenied, 4)]
     [DataRow(ControlProtocol.ErrorCodes.Disabled, 4)]
     [DataRow(ControlProtocol.ErrorCodes.Internal, 1)]
     [DataRow("codigo_que_no_existe", 1)]
