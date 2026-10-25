@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
@@ -146,6 +147,43 @@ namespace SnipShot.Services
         {
             var screenshot = await _screenCaptureService.CaptureRegionAsync(x, y, width, height);
             return screenshot == null ? null : await ApplyBorderIfEnabledAsync(screenshot);
+        }
+
+        /// <summary>
+        /// Recorta una región, en coordenadas de pantalla, del fondo congelado de un overlay.
+        /// La región se ajusta a los límites del fondo (una ventana puede salirse de pantalla).
+        /// </summary>
+        private static SoftwareBitmap? CropFromBackground(SoftwareBitmap background, RectInt32 virtualBounds, RectInt32 region)
+        {
+            int x = Math.Clamp(region.X - virtualBounds.X, 0, background.PixelWidth);
+            int y = Math.Clamp(region.Y - virtualBounds.Y, 0, background.PixelHeight);
+            int right = Math.Clamp(region.X - virtualBounds.X + region.Width, 0, background.PixelWidth);
+            int bottom = Math.Clamp(region.Y - virtualBounds.Y + region.Height, 0, background.PixelHeight);
+            if (right <= x || bottom <= y)
+            {
+                return null;
+            }
+
+            // EnsureDisplayFormat no sirve aquí: libera el original, que sigue siendo el fondo del overlay.
+            var source = background.BitmapPixelFormat == BitmapPixelFormat.Bgra8 &&
+                         background.BitmapAlphaMode == BitmapAlphaMode.Premultiplied
+                ? background
+                : SoftwareBitmap.Convert(background, BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied);
+            try
+            {
+                var pixels = new byte[source.PixelWidth * source.PixelHeight * 4];
+                source.CopyToBuffer(pixels.AsBuffer());
+                var cropped = PixelCompositor.Crop(pixels, source.PixelWidth, source.PixelHeight, x, y, right - x, bottom - y);
+                return SoftwareBitmap.CreateCopyFromBuffer(
+                    cropped.AsBuffer(), BitmapPixelFormat.Bgra8, right - x, bottom - y, BitmapAlphaMode.Premultiplied);
+            }
+            finally
+            {
+                if (!ReferenceEquals(source, background))
+                {
+                    source.Dispose();
+                }
+            }
         }
 
         /// <summary>
@@ -359,12 +397,12 @@ namespace SnipShot.Services
                 }
                 else if (args.SelectedRegion.HasValue)
                 {
+                    // Se recorta la imagen congelada que mostraba el overlay, como en los modos
+                    // rectangular y libre, en vez de cerrar el overlay y volver a capturar la
+                    // pantalla: así se guarda exactamente lo que el usuario vio al elegir. Va
+                    // antes de cualquier await porque el fondo se libera al cerrarse el overlay.
+                    var screenshot = CropFromBackground(backgroundBitmap, virtualBounds, args.SelectedRegion.Value);
                     overlay.CloseOverlay();
-                    await Task.Delay(75);
-
-                    var region = args.SelectedRegion.Value;
-                    var screenshot = await _screenCaptureService.CaptureRegionAsync(
-                        region.X, region.Y, region.Width, region.Height);
 
                     if (screenshot != null)
                     {
