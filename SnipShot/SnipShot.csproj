@@ -51,6 +51,19 @@
   </ItemGroup>
 
   <!--
+    El CLI (comando snipshot) viaja dentro del mismo paquete MSIX. La referencia solo sirve
+    para que su ejecutable acabe en la salida que se empaqueta; la app no usa su código.
+
+    Comparte el runtime autocontenido de la app, y el trimming de Release borra todo lo que
+    la app no usa: SnipShot.Cli.dll, System.Console, System.IO.Pipes... Declararlo raíz hace
+    que ILLink lo conserve junto con las partes del runtime de las que depende.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\SnipShot.Cli\SnipShot.Cli.csproj" />
+    <TrimmerRootAssembly Include="SnipShot.Cli" />
+  </ItemGroup>
+
+  <!--
     Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution
     Explorer "Package and Publish" context menu entry to be enabled for this project even if
     the Windows App SDK Nuget package has not yet been restored.

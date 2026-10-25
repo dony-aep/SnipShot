@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- Debe coincidir con el TFM de SnipShot, que lo referencia para meterlo en su paquete. -->
+    <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.22621.0</TargetPlatformMinVersion>
+    <SupportedOSPlatformVersion>10.0.22621.0</SupportedOSPlatformVersion>
+    <Platforms>x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <!--
+      SnipShot se compila autocontenido y el SDK no deja que un ejecutable autocontenido
+      referencie a otro que no lo es. Además, dentro del paquete no hay un .NET instalado
+      del que depender: el CLI usa el runtime que la app ya lleva en su carpeta.
+    -->
+    <SelfContained>true</SelfContained>
+    <!--
+      Sin RID explícito el SDK asume el de la máquina (win-x64) y el bundle falla al compilar
+      arm64. La app lo saca de sus .pubxml; aquí se deriva de la plataforma.
+    -->
+    <RuntimeIdentifier Condition="'$(Platform)' == 'x64'">win-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
+    <RootNamespace>SnipShot.Cli</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
