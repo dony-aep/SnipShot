@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Windows.Graphics;
@@ -139,9 +140,25 @@ namespace SnipShot.Services
         }
 
         /// <summary>
+        /// Captura una región de pantalla sin overlay. La usa el comando snipshot con --rect.
+        /// </summary>
+        public async Task<SoftwareBitmap?> CaptureRegionDirectAsync(int x, int y, int width, int height)
+        {
+            var screenshot = await _screenCaptureService.CaptureRegionAsync(x, y, width, height);
+            return screenshot == null ? null : await ApplyBorderIfEnabledAsync(screenshot);
+        }
+
+        /// <summary>
+        /// Cierra el overlay como si el usuario pulsara Esc cuando se cancela el token. El token se
+        /// cancela desde otro hilo y el overlay solo se puede tocar desde el suyo.
+        /// </summary>
+        private static CancellationTokenRegistration RegisterOverlayCancellation(ShadeOverlayWindow overlay, CancellationToken cancellationToken) =>
+            cancellationToken.Register(() => overlay.DispatcherQueue.TryEnqueue(overlay.CancelCapture));
+
+        /// <summary>
         /// Ejecuta una captura rectangular con overlay de selección
         /// </summary>
-        public async Task<SoftwareBitmap?> CaptureRectangularAsync()
+        public async Task<SoftwareBitmap?> CaptureRectangularAsync(CancellationToken cancellationToken = default)
         {
             // 1. Capturar la pantalla mientras la ventana principal está cloaked
             var fullScreenBitmap = await _screenCaptureService.CaptureFullScreenAsync();
@@ -213,6 +230,8 @@ namespace SnipShot.Services
                 completionSource.TrySetResult(false);
             };
 
+            using var cancellation = RegisterOverlayCancellation(overlay, cancellationToken);
+
             try
             {
                 await overlay.WaitForCompletionAsync();
@@ -231,7 +250,7 @@ namespace SnipShot.Services
         /// Usar este método cuando las ventanas deben enumerarse antes de ocultar la aplicación.
         /// </summary>
         /// <param name="availableWindows">Lista de ventanas ya enumeradas</param>
-        public async Task<SoftwareBitmap?> CaptureWindowAsync(IReadOnlyList<WindowInfo> availableWindows)
+        public async Task<SoftwareBitmap?> CaptureWindowAsync(IReadOnlyList<WindowInfo> availableWindows, CancellationToken cancellationToken = default)
         {
             if (availableWindows.Count == 0)
             {
@@ -260,7 +279,8 @@ namespace SnipShot.Services
                     resultBitmap = bitmap;
                     completionSource.TrySetResult(true);
                 },
-                () => completionSource.TrySetResult(false));
+                () => completionSource.TrySetResult(false),
+                cancellationToken);
 
             await completionSource.Task;
             return resultBitmap;
@@ -316,7 +336,8 @@ namespace SnipShot.Services
             RectInt32 virtualBounds, 
             IReadOnlyList<WindowInfo> availableWindows,
             Action<SoftwareBitmap> onCompleted,
-            Action onCancelled)
+            Action onCancelled,
+            CancellationToken cancellationToken = default)
         {
             var overlay = new ShadeOverlayWindow(
                 backgroundBitmap, 
@@ -364,6 +385,8 @@ namespace SnipShot.Services
                 onCancelled();
             };
 
+            using var cancellation = RegisterOverlayCancellation(overlay, cancellationToken);
+
             try
             {
                 await overlay.WaitForCompletionAsync();
@@ -378,7 +401,7 @@ namespace SnipShot.Services
         /// <summary>
         /// Ejecuta una captura de forma libre con overlay de selección
         /// </summary>
-        public async Task<SoftwareBitmap?> CaptureFreeFormAsync()
+        public async Task<SoftwareBitmap?> CaptureFreeFormAsync(CancellationToken cancellationToken = default)
         {
             // 1. Capturar la pantalla mientras la ventana principal está cloaked
             var backgroundBitmap = await _screenCaptureService.CaptureFullScreenAsync();
@@ -402,7 +425,8 @@ namespace SnipShot.Services
                     resultBitmap = bitmap;
                     completionSource.TrySetResult(true);
                 },
-                () => completionSource.TrySetResult(false));
+                () => completionSource.TrySetResult(false),
+                cancellationToken);
 
             await completionSource.Task;
             return resultBitmap;
@@ -415,7 +439,8 @@ namespace SnipShot.Services
             SoftwareBitmap backgroundBitmap,
             RectInt32 virtualBounds,
             Action<SoftwareBitmap> onCompleted,
-            Action onCancelled)
+            Action onCancelled,
+            CancellationToken cancellationToken = default)
         {
             var overlay = new ShadeOverlayWindow(
                 backgroundBitmap,
@@ -468,6 +493,8 @@ namespace SnipShot.Services
             {
                 onCancelled();
             };
+
+            using var cancellation = RegisterOverlayCancellation(overlay, cancellationToken);
 
             try
             {

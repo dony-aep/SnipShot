@@ -36,11 +36,19 @@ namespace SnipShot.Services
         {
             public const string FullScreen = "fullscreen";
             public const string Window = "window";
+            public const string Region = "region";
+            public const string FreeForm = "freeform";
 
-            public const string Available = $"{FullScreen}, {Window}";
+            public const string Available = $"{FullScreen}, {Window}, {Region}, {FreeForm}";
         }
 
         public const int MaxDelaySeconds = 30;
+
+        // Lo que se espera a que el usuario dibuje o elija en un overlay. Dos minutos dan para
+        // cambiar de ventana y volver; el máximo evita dejar un overlay olvidado media hora.
+        public const int DefaultTimeoutSeconds = 120;
+        public const int MinTimeoutSeconds = 5;
+        public const int MaxTimeoutSeconds = 600;
 
         /// <summary>
         /// Argumento con el que el CLI arranca la app cuando está cerrada: la deja en la
@@ -58,8 +66,26 @@ namespace SnipShot.Services
             public const string Disabled = "disabled";
             public const string NotFound = "not_found";
             public const string Ambiguous = "ambiguous";
+            public const string Cancelled = "cancelled";
+            public const string Timeout = "timeout";
+            public const string Busy = "busy";
             public const string Internal = "internal";
         }
+
+        /// <summary>
+        /// Las capturas que abren un overlay y esperan al usuario.
+        /// </summary>
+        public static bool IsInteractive(ControlRequest request) =>
+            request.Command == Commands.Capture
+            && (request.Mode == CaptureModes.FreeForm
+                || (request.Mode == CaptureModes.Region && request.Rect is null)
+                || (request.Mode == CaptureModes.Window && request.Interactive));
+
+        /// <summary>
+        /// Plazo de espera de una captura interactiva, con el valor por defecto si no se indicó.
+        /// </summary>
+        public static int GetTimeoutSeconds(ControlRequest request) =>
+            request.TimeoutSeconds > 0 ? request.TimeoutSeconds : DefaultTimeoutSeconds;
 
         /// <summary>
         /// Nombre del pipe. Incluye la sesión de Windows para que dos sesiones abiertas a la vez
@@ -124,7 +150,7 @@ namespace SnipShot.Services
 
         private static ControlError? ValidateCapture(ControlRequest request)
         {
-            if (request.Mode is not (CaptureModes.FullScreen or CaptureModes.Window))
+            if (request.Mode is not (CaptureModes.FullScreen or CaptureModes.Window or CaptureModes.Region or CaptureModes.FreeForm))
             {
                 return new ControlError(ErrorCodes.InvalidRequest,
                     request.Mode is null
@@ -136,16 +162,38 @@ namespace SnipShot.Services
                 + (string.IsNullOrWhiteSpace(request.Title) ? 0 : 1)
                 + (string.IsNullOrWhiteSpace(request.Process) ? 0 : 1);
 
-            if (request.Mode == CaptureModes.Window && selectors != 1)
+            if (request.Mode == CaptureModes.Window)
+            {
+                if (request.Interactive ? selectors != 0 : selectors != 1)
+                {
+                    return new ControlError(ErrorCodes.InvalidRequest,
+                        "Para capturar una ventana indica exactamente una de estas opciones: hwnd, title, process o interactive.");
+                }
+            }
+            else if (selectors != 0 || request.Interactive)
             {
                 return new ControlError(ErrorCodes.InvalidRequest,
-                    "Para capturar una ventana indica exactamente una de estas opciones: hwnd, title o process.");
+                    "hwnd, title, process e interactive solo se usan con el modo window.");
             }
 
-            if (request.Mode == CaptureModes.FullScreen && selectors != 0)
+            if (request.Rect is { } rect)
+            {
+                if (request.Mode != CaptureModes.Region)
+                {
+                    return new ControlError(ErrorCodes.InvalidRequest, "rect solo se usa con el modo region.");
+                }
+
+                if (rect.Width <= 0 || rect.Height <= 0)
+                {
+                    return new ControlError(ErrorCodes.InvalidRequest,
+                        $"El ancho y el alto de la región deben ser mayores que cero: {rect.Width}x{rect.Height}.");
+                }
+            }
+
+            if (request.TimeoutSeconds != 0 && request.TimeoutSeconds is < MinTimeoutSeconds or > MaxTimeoutSeconds)
             {
                 return new ControlError(ErrorCodes.InvalidRequest,
-                    "hwnd, title y process solo se usan con el modo window.");
+                    $"El tiempo de espera debe estar entre {MinTimeoutSeconds} y {MaxTimeoutSeconds} segundos.");
             }
 
             if (request.DelaySeconds is < 0 or > MaxDelaySeconds)
@@ -237,7 +285,9 @@ namespace SnipShot.Services
             {
                 ErrorCodes.InvalidRequest or ErrorCodes.UnsupportedVersion or ErrorCodes.UnknownCommand
                     or ErrorCodes.NotFound or ErrorCodes.Ambiguous => 2,
+                ErrorCodes.Cancelled or ErrorCodes.Timeout => 3,
                 ErrorCodes.NotRunning or ErrorCodes.AccessDenied or ErrorCodes.Disabled => 4,
+                ErrorCodes.Busy => 5,
                 _ => 1,
             };
         }
@@ -269,7 +319,28 @@ namespace SnipShot.Services
         public string? Title { get; init; }
 
         public string? Process { get; init; }
+
+        /// <summary>
+        /// En el modo window, abre el overlay para que el usuario elija la ventana.
+        /// </summary>
+        public bool Interactive { get; init; }
+
+        /// <summary>
+        /// En el modo region, captura este rectángulo sin overlay. Sin él, el usuario lo dibuja.
+        /// </summary>
+        public RegionRect? Rect { get; init; }
+
+        /// <summary>
+        /// Segundos de espera en las capturas interactivas; 0 usa el valor por defecto.
+        /// </summary>
+        public int TimeoutSeconds { get; init; }
     }
+
+    /// <summary>
+    /// Rectángulo en coordenadas de pantalla y píxeles físicos. X e Y pueden ser negativos en
+    /// monitores situados a la izquierda o encima del principal.
+    /// </summary>
+    internal sealed record RegionRect(int X, int Y, int Width, int Height);
 
     internal sealed class ControlResponse
     {

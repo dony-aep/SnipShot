@@ -143,7 +143,11 @@ namespace SnipShot.Cli
             using var writer = new StreamWriter(client, Utf8WithoutBom, 1024, leaveOpen: true) { AutoFlush = true };
             using var reader = new StreamReader(client, Utf8WithoutBom, false, 1024, leaveOpen: true);
 
-            using var timeout = new CancellationTokenSource(ResponseTimeout + TimeSpan.FromSeconds(request.DelaySeconds));
+            // En una captura interactiva hay que esperar además lo que tarde el usuario; la app
+            // cierra el overlay al agotar ese plazo y responde timeout antes de que venza este.
+            var waitSeconds = request.DelaySeconds
+                + (ControlProtocol.IsInteractive(request) ? ControlProtocol.GetTimeoutSeconds(request) : 0);
+            using var timeout = new CancellationTokenSource(ResponseTimeout + TimeSpan.FromSeconds(waitSeconds));
             try
             {
                 await writer.WriteLineAsync(ControlProtocol.SerializeRequest(request));

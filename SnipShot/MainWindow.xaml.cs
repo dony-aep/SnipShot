@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -94,6 +95,7 @@ namespace SnipShot
         private HotkeyService? _hotkeyService;
         private NativeSystemTrayService? _systemTrayService;
         private ExternalControlService? _externalControlService;
+        private readonly SemaphoreSlim _externalCaptureGate = new(1, 1);
         private bool _isReallyClosing;
         private bool _minimizeToTray = true;
         private string? _currentDisplayedFilePath;
@@ -1022,8 +1024,27 @@ namespace SnipShot
         /// </summary>
         private async Task<ControlResponse> CaptureForExternalControlAsync(ControlRequest request)
         {
+            // Una sola captura a la vez: un segundo overlay taparía al primero.
+            if (!await _externalCaptureGate.WaitAsync(0))
+            {
+                return ControlResponse.Failure(ControlProtocol.ErrorCodes.Busy,
+                    "Ya hay una captura en curso. Espera a que termine y vuelve a intentarlo.");
+            }
+
+            try
+            {
+                return await CaptureForExternalControlCoreAsync(request);
+            }
+            finally
+            {
+                _externalCaptureGate.Release();
+            }
+        }
+
+        private async Task<ControlResponse> CaptureForExternalControlCoreAsync(ControlRequest request)
+        {
             WindowEntry? window = null;
-            if (request.Mode == ControlProtocol.CaptureModes.Window)
+            if (request.Mode == ControlProtocol.CaptureModes.Window && !request.Interactive)
             {
                 var matches = ControlProtocol.FindWindows(GetCaptureableWindowsForExternalControl(), request);
                 if (matches.Length == 0)
@@ -1045,12 +1066,41 @@ namespace SnipShot
                 window = matches[0];
             }
 
-            var bitmap = window is null
-                ? await CaptureScreenForExternalControlAsync(request.DelaySeconds)
-                : await CaptureWindowForExternalControlAsync(window, request.DelaySeconds);
+            var interactive = ControlProtocol.IsInteractive(request);
+            var timeoutSeconds = ControlProtocol.GetTimeoutSeconds(request);
+            using var timeout = interactive
+                ? new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds + request.DelaySeconds))
+                : null;
+            var cancellationToken = timeout?.Token ?? CancellationToken.None;
+            var delay = request.DelaySeconds;
+
+            var bitmap = request.Mode switch
+            {
+                ControlProtocol.CaptureModes.Window when window is not null =>
+                    await CaptureWindowForExternalControlAsync(window, delay),
+                ControlProtocol.CaptureModes.Window =>
+                    await CaptureInteractiveWindowForExternalControlAsync(delay, cancellationToken),
+                ControlProtocol.CaptureModes.Region when request.Rect is { } rect =>
+                    await CaptureWithAppHiddenAsync(
+                        () => _captureOrchestrator!.CaptureRegionDirectAsync(rect.X, rect.Y, rect.Width, rect.Height), delay),
+                ControlProtocol.CaptureModes.Region =>
+                    await CaptureWithAppHiddenAsync(() => _captureOrchestrator!.CaptureRectangularAsync(cancellationToken), delay),
+                ControlProtocol.CaptureModes.FreeForm =>
+                    await CaptureWithAppHiddenAsync(() => _captureOrchestrator!.CaptureFreeFormAsync(cancellationToken), delay),
+                _ =>
+                    await CaptureWithAppHiddenAsync(() => _captureOrchestrator!.CaptureFullScreenAsync(), delay),
+            };
 
             if (bitmap == null)
             {
+                if (interactive)
+                {
+                    return timeout!.IsCancellationRequested
+                        ? ControlResponse.Failure(ControlProtocol.ErrorCodes.Timeout,
+                            $"No se completó la selección en {timeoutSeconds} segundos y se cerró el overlay.")
+                        : ControlResponse.Failure(ControlProtocol.ErrorCodes.Cancelled, "El usuario canceló la captura.");
+                }
+
                 return ControlResponse.Failure(ControlProtocol.ErrorCodes.Internal,
                     window is null ? "No se pudo capturar la pantalla." : $"No se pudo capturar la ventana {window.Hwnd}.");
             }
@@ -1096,10 +1146,10 @@ namespace SnipShot
             }
         }
 
-        private async Task<SoftwareBitmap?> CaptureScreenForExternalControlAsync(int delaySeconds)
+        private async Task<SoftwareBitmap?> CaptureWithAppHiddenAsync(Func<Task<SoftwareBitmap?>> capture, int delaySeconds)
         {
             SoftwareBitmap? bitmap = null;
-            async Task CaptureAsync() => bitmap = await _captureOrchestrator!.CaptureFullScreenAsync();
+            async Task CaptureAsync() => bitmap = await capture();
 
             // ExecuteWithHiddenWindowAsync muestra la ventana al terminar. Si la app está en la
             // bandeja no hay nada que ocultar, y usarlo la haría aparecer tras cada captura.
@@ -1132,6 +1182,21 @@ namespace SnipShot
             }
 
             return await _captureOrchestrator!.CaptureWindowByHandleAsync(new IntPtr(window.Hwnd));
+        }
+
+        /// <summary>
+        /// Overlay de selección de ventana.
+        /// </summary>
+        private async Task<SoftwareBitmap?> CaptureInteractiveWindowForExternalControlAsync(int delaySeconds, CancellationToken cancellationToken)
+        {
+            // El overlay recorta la ventana elegida del fondo capturado con SnipShot ya oculta: si
+            // se ofreciera la propia app, el recorte mostraría lo que hay detrás de ella.
+            var appWindowHandle = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            var availableWindows = WindowEnumerationHelper.GetCaptureableWindows(
+                appWindowHandle, includeOwnWindow: !_windowVisibilityManager!.HideOnCapture);
+
+            return await CaptureWithAppHiddenAsync(
+                () => _captureOrchestrator!.CaptureWindowAsync(availableWindows, cancellationToken), delaySeconds);
         }
 
         private WindowEntry[] GetCaptureableWindowsForExternalControl()

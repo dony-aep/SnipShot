@@ -141,6 +141,58 @@ public class ControlProtocolTests
     }
 
     [TestMethod]
+    [DataRow("\"mode\":\"region\"", "región que dibuja el usuario")]
+    [DataRow("\"mode\":\"region\",\"rect\":{\"x\":-1920,\"y\":0,\"width\":800,\"height\":600}", "región fija en un monitor a la izquierda")]
+    [DataRow("\"mode\":\"freeform\"", "forma libre")]
+    [DataRow("\"mode\":\"window\",\"interactive\":true", "ventana que elige el usuario")]
+    [DataRow("\"mode\":\"region\",\"timeoutSeconds\":5", "tiempo de espera mínimo")]
+    [DataRow("\"mode\":\"freeform\",\"timeoutSeconds\":600", "tiempo de espera máximo")]
+    public void CapturaInteractivaORegionFija_SeAcepta(string campos, string caso)
+    {
+        Assert.IsTrue(ControlProtocol.TryParseRequest(Captura(campos), out _, out var error), $"{caso}: {error?.Message}");
+    }
+
+    [TestMethod]
+    [DataRow("\"mode\":\"region\",\"rect\":{\"x\":0,\"y\":0,\"width\":-10,\"height\":100}", "ancho negativo")]
+    [DataRow("\"mode\":\"region\",\"rect\":{\"x\":0,\"y\":0,\"width\":100,\"height\":0}", "alto cero")]
+    [DataRow("\"mode\":\"fullscreen\",\"rect\":{\"x\":0,\"y\":0,\"width\":10,\"height\":10}", "rect fuera del modo region")]
+    [DataRow("\"mode\":\"freeform\",\"interactive\":true", "interactive fuera del modo window")]
+    [DataRow("\"mode\":\"window\",\"interactive\":true,\"process\":\"notepad\"", "interactive junto a un selector")]
+    [DataRow("\"mode\":\"region\",\"timeoutSeconds\":4", "tiempo de espera por debajo del mínimo")]
+    [DataRow("\"mode\":\"region\",\"timeoutSeconds\":601", "tiempo de espera por encima del máximo")]
+    public void OpcionesInteractivasIncorrectas_SonPeticionInvalida(string campos, string motivo)
+    {
+        AssertRechazada(Captura(campos), ControlProtocol.ErrorCodes.InvalidRequest, motivo);
+    }
+
+    [TestMethod]
+    [DataRow("region", false, false, true, "región sin rect la dibuja el usuario")]
+    [DataRow("region", true, false, false, "región con rect se captura directamente")]
+    [DataRow("freeform", false, false, true, "la forma libre siempre es interactiva")]
+    [DataRow("window", false, true, true, "ventana con interactive")]
+    [DataRow("window", false, false, false, "ventana por selector")]
+    [DataRow("fullscreen", false, false, false, "pantalla completa")]
+    public void EsInteractiva_SoloCuandoEsperaAlUsuario(string modo, bool conRect, bool interactiva, bool esperado, string caso)
+    {
+        var peticion = new ControlRequest
+        {
+            Command = ControlProtocol.Commands.Capture,
+            Mode = modo,
+            Rect = conRect ? new RegionRect(0, 0, 10, 10) : null,
+            Interactive = interactiva,
+        };
+
+        Assert.AreEqual(esperado, ControlProtocol.IsInteractive(peticion), caso);
+    }
+
+    [TestMethod]
+    public void TiempoDeEsperaSinIndicar_UsaElValorPorDefecto()
+    {
+        Assert.AreEqual(ControlProtocol.DefaultTimeoutSeconds, ControlProtocol.GetTimeoutSeconds(new ControlRequest()));
+        Assert.AreEqual(45, ControlProtocol.GetTimeoutSeconds(new ControlRequest { TimeoutSeconds = 45 }));
+    }
+
+    [TestMethod]
     public void ListWindows_SeAcepta()
     {
         Assert.IsTrue(ControlProtocol.TryParseRequest("{\"version\":1,\"command\":\"list-windows\"}", out var peticion, out _));
@@ -300,6 +352,9 @@ public class ControlProtocolTests
     [DataRow(ControlProtocol.ErrorCodes.UnknownCommand, 2)]
     [DataRow(ControlProtocol.ErrorCodes.NotFound, 2)]
     [DataRow(ControlProtocol.ErrorCodes.Ambiguous, 2)]
+    [DataRow(ControlProtocol.ErrorCodes.Cancelled, 3)]
+    [DataRow(ControlProtocol.ErrorCodes.Timeout, 3)]
+    [DataRow(ControlProtocol.ErrorCodes.Busy, 5)]
     [DataRow(ControlProtocol.ErrorCodes.NotRunning, 4)]
     [DataRow(ControlProtocol.ErrorCodes.AccessDenied, 4)]
     [DataRow(ControlProtocol.ErrorCodes.Disabled, 4)]

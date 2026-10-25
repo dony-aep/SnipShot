@@ -12,8 +12,9 @@ namespace SnipShot.Cli
     {
         public const string Usage =
             "Uso: snipshot status | snipshot list-windows | "
-            + "snipshot capture fullscreen|window [--hwnd <h> | --title <texto> | --process <nombre>] "
-            + "[--out <archivo.png>] [--clipboard] [--delay <segundos>]";
+            + "snipshot capture fullscreen|window|region|freeform "
+            + "[--hwnd <h> | --title <texto> | --process <nombre> | --interactive] [--rect x,y,ancho,alto] "
+            + "[--out <archivo.png>] [--clipboard] [--delay <segundos>] [--timeout <segundos>]";
 
         /// <param name="currentDirectory">Directorio contra el que se resuelven las rutas
         /// relativas. La app tiene otro directorio de trabajo, así que se envían absolutas.</param>
@@ -59,6 +60,9 @@ namespace SnipShot.Cli
             long? hwnd = null;
             string? title = null;
             string? process = null;
+            var interactive = false;
+            RegionRect? rect = null;
+            var timeoutSeconds = 0;
 
             for (var i = 0; i < options.Length; i++)
             {
@@ -66,6 +70,26 @@ namespace SnipShot.Cli
                 {
                     case "--clipboard":
                         clipboard = true;
+                        break;
+
+                    case "--interactive":
+                        interactive = true;
+                        break;
+
+                    case "--rect" when i + 1 < options.Length:
+                        if (!TryParseRect(options[++i], out rect))
+                        {
+                            error = $"La región debe tener la forma x,y,ancho,alto con números enteros: {options[i]}.";
+                            return false;
+                        }
+                        break;
+
+                    case "--timeout" when i + 1 < options.Length:
+                        if (!int.TryParse(options[++i], NumberStyles.None, CultureInfo.InvariantCulture, out timeoutSeconds))
+                        {
+                            error = $"El tiempo de espera debe ser un número entero de segundos: {options[i]}.";
+                            return false;
+                        }
                         break;
 
                     case "--out" when i + 1 < options.Length:
@@ -97,7 +121,7 @@ namespace SnipShot.Cli
                         process = options[++i];
                         break;
 
-                    case "--out" or "--delay" or "--hwnd" or "--title" or "--process":
+                    case "--out" or "--delay" or "--hwnd" or "--title" or "--process" or "--rect" or "--timeout":
                         error = $"Falta el valor de {options[i]}.";
                         return false;
 
@@ -117,8 +141,35 @@ namespace SnipShot.Cli
                 Hwnd = hwnd,
                 Title = title,
                 Process = process,
+                Interactive = interactive,
+                Rect = rect,
+                TimeoutSeconds = timeoutSeconds,
             };
             error = null;
+            return true;
+        }
+
+        // X e Y admiten signo: un monitor a la izquierda o encima del principal tiene
+        // coordenadas negativas. Que ancho y alto sean positivos lo comprueba la app.
+        private static bool TryParseRect(string value, [NotNullWhen(true)] out RegionRect? rect)
+        {
+            rect = null;
+            var parts = value.Split(',');
+            if (parts.Length != 4)
+            {
+                return false;
+            }
+
+            var numbers = new int[4];
+            for (var i = 0; i < 4; i++)
+            {
+                if (!int.TryParse(parts[i].Trim(), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out numbers[i]))
+                {
+                    return false;
+                }
+            }
+
+            rect = new RegionRect(numbers[0], numbers[1], numbers[2], numbers[3]);
             return true;
         }
 

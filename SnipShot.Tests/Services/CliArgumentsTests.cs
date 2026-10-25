@@ -86,6 +86,24 @@ public class CliArgumentsTests
     }
 
     [TestMethod]
+    [DataRow("10,20,300,200", 10, 20, 300, 200, "rectángulo normal")]
+    [DataRow("-1920,0,800,600", -1920, 0, 800, 600, "monitor a la izquierda del principal")]
+    [DataRow(" 1, 2 ,3,4", 1, 2, 3, 4, "espacios alrededor de los números")]
+    public void Rect_SeConvierteEnUnaRegion(string valor, int x, int y, int ancho, int alto, string caso)
+    {
+        Assert.AreEqual(new RegionRect(x, y, ancho, alto), Aceptar("capture", "region", "--rect", valor).Rect, caso);
+    }
+
+    [TestMethod]
+    public void InteractiveYTimeout_SeRecogen()
+    {
+        var peticion = Aceptar("capture", "window", "--interactive", "--timeout", "45");
+
+        Assert.IsTrue(peticion.Interactive);
+        Assert.AreEqual(45, peticion.TimeoutSeconds);
+    }
+
+    [TestMethod]
     public void TituloYProceso_LleganTalCual()
     {
         Assert.AreEqual("Bloc de notas", Aceptar("capture", "window", "--title", "Bloc de notas").Title);
@@ -108,6 +126,10 @@ public class CliArgumentsTests
     [DataRow(new[] { "capture", "window", "--title" }, "--title sin valor")]
     [DataRow(new[] { "capture", "window", "--process" }, "--process sin valor")]
     [DataRow(new[] { "list-windows", "--all" }, "list-windows no admite opciones")]
+    [DataRow(new[] { "capture", "region", "--rect", "1,2,3" }, "rect con tres números")]
+    [DataRow(new[] { "capture", "region", "--rect", "a,b,c,d" }, "rect con texto")]
+    [DataRow(new[] { "capture", "region", "--rect" }, "--rect sin valor")]
+    [DataRow(new[] { "capture", "region", "--timeout", "dos" }, "timeout que no es un número")]
     public void ArgumentosInvalidos_SeRechazanConUnMensaje(string[] args, string motivo)
     {
         var error = Rechazar(args);
