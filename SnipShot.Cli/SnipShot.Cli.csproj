@@ -26,4 +26,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!--
+    El protocolo vive en la app y se enlaza aquí en vez de referenciar SnipShot.csproj: esa
+    referencia arrastraría WinUI y el Windows App SDK a un ejecutable de consola.
+  -->
+  <ItemGroup>
+    <Compile Include="..\SnipShot\Services\ControlProtocol.cs" Link="Protocolo\ControlProtocol.cs" />
+  </ItemGroup>
+
 </Project>
