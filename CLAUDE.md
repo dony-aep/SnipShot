@@ -86,7 +86,11 @@ Todo el código de la app vive en `SnipShot/`:
 
 ## Empaquetado y firma
 
-- El paquete se firma con `SnipShot/SnipShot_TemporaryKey.pfx` (autofirmado, sin contraseña, sujeto `CN=doney`), que debe coincidir con el `Publisher` de `Package.appxmanifest`. Si caduca, genera otro desde Visual Studio (Package.appxmanifest > Empaquetado).
+- El paquete se firma con un certificado autofirmado de sujeto `CN=doney`, válido hasta el 2031-10-25. El sujeto debe coincidir con el `Publisher` de `Package.appxmanifest`: de él depende la identidad del paquete, así que un certificado nuevo con el mismo sujeto actualiza la app instalada sin desinstalarla.
+- `SnipShot.csproj` lo busca por huella (`PackageCertificateThumbprint`) en `Cert:\CurrentUser\My`. No hay `.pfx` en el proyecto y `*.pfx` está en `.gitignore`: el repositorio es público.
+- La copia de seguridad con contraseña está en `..\SnipShot-firma`, fuera del repositorio. La contraseña está a su lado en un `.clixml` cifrado con DPAPI, que solo descifra el usuario de Windows que lo creó. En otra máquina, importa el `.pfx` en `Cert:\CurrentUser\My` antes de generar el bundle.
+- Las firmas llevan sello de tiempo (`AppxPackageSigningTimestampServerUrl`, DigiCert), así que los paquetes se siguen pudiendo instalar después de que caduque el certificado. Generar el bundle Release exige conexión a internet.
+- Al renovar: mismo sujeto, actualiza la huella en el `.csproj` y publica el `.cer` nuevo con la release, porque cada máquina tiene que volver a confiar en él.
 - En una máquina nueva hay que importar el `.cer` en `Cert:\LocalMachine\TrustedPeople` (como administrador) antes de instalar el bundle.
 - La versión de la app está en `Package.appxmanifest` (`Identity/Version`) y debe coincidir con la última entrada del CHANGELOG.
 
