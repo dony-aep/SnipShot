@@ -7,6 +7,12 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-26
+
+### Added
+- `snipshot capture window` admite `--rect` para capturar solo una parte de la ventana, con coordenadas relativas a ella. Funciona aunque la ventana esté tapada, así que un agente ya no tiene que traerla al frente ni quitarle el foco al usuario para capturar un panel o un botón
+- Skill `capturing-screenshots-with-snipshot` para Claude Code, en `skills/` y adjunta como `.zip` a cada release: con ella, un agente sabe usar el comando sin explicaciones previas, desde elegir la ventana hasta actuar según el código de salida. Se instala copiándola en `%USERPROFILE%\.claude\skills\`
+
 ## [1.3.0] - 2026-10-25
 
 ### Added
@@ -104,7 +110,8 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 ### Changed
 - Lectura automática de la versión de la app desde `Package.appxmanifest` para evitar mantener una versión duplicada en el código
 
-[Unreleased]: https://github.com/dony-aep/SnipShot/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/dony-aep/SnipShot/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/dony-aep/SnipShot/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/dony-aep/SnipShot/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/dony-aep/SnipShot/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/dony-aep/SnipShot/compare/v1.0.0...v1.1.0
