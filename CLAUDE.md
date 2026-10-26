@@ -11,6 +11,7 @@ Guía para trabajar en este repositorio. Las reglas de `.claude/rules/` añaden 
   - `SnipShot/`: la app.
   - `SnipShot.Cli/`: el comando `snipshot`, que viaja dentro del mismo MSIX. Uso documentado en `docs/cli.md`.
   - `SnipShot.Tests/`: pruebas MSTest.
+- `skills/capturing-screenshots-with-snipshot/` es la skill de Claude Code para el CLI. Cada release la adjunta como `.zip`.
 - Comentarios, documentación, CHANGELOG y commits van en español, con tildes y ortografía correcta.
 
 ## Comandos

@@ -144,6 +144,24 @@ El formato está pensado para que un agente lo use sin interpretar texto: una l�
 - Ante `cancelled` o `timeout` no se debe reintentar sin preguntar.
 - La imagen se puede abrir para comprobar o describir lo capturado.
 
+### Skill para Claude Code
+
+La skill `capturing-screenshots-with-snipshot` le explica todo esto a Claude Code: cuándo capturar, qué selector usar y qué hacer con cada código de salida. Está en [`skills/capturing-screenshots-with-snipshot`](../skills/capturing-screenshots-with-snipshot/SKILL.md), y cada release la adjunta como `.zip`.
+
+Para instalarla en todos tus proyectos, copia la carpeta `capturing-screenshots-with-snipshot` en `%USERPROFILE%\.claude\skills\`. Desde un clon del repositorio:
+
+```powershell
+Copy-Item -Recurse skills\capturing-screenshots-with-snipshot "$env:USERPROFILE\.claude\skills\"
+```
+
+Con el `.zip` de la release:
+
+```powershell
+Expand-Archive .\capturing-screenshots-with-snipshot.zip "$env:USERPROFILE\.claude\skills\"
+```
+
+Para un solo proyecto, cópiala en su carpeta `.claude\skills\`. Claude Code la carga en las sesiones que abras después. Cada versión de la skill describe las opciones de la release con la que se publica: si actualizas SnipShot, sustitúyela por la nueva.
+
 ## Cómo funciona
 
 SnipShot abre un named pipe propio de la sesión de Windows mientras **Permitir control externo** está activado. El pipe solo acepta conexiones del mismo usuario y con el mismo nivel de elevación. El comando envía una petición JSON por él, la app la valida, captura y responde.

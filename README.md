@@ -95,6 +95,16 @@ snipshot capture region --rect 0,0,800,600 --out captura.png
 
 Cada comando responde con una línea JSON con la ruta del PNG y sale con un código que resume el resultado. Comandos, opciones, códigos de salida y uso desde agentes de IA en [docs/cli.md](docs/cli.md).
 
+### Con Claude Code
+
+La skill [`capturing-screenshots-with-snipshot`](skills/capturing-screenshots-with-snipshot/SKILL.md) enseña a Claude Code a usar el comando: elegir la ventana, capturar una parte de ella sin traerla al frente y actuar según el código de salida. Cada release la adjunta como `.zip`. Descomprímelo en `%USERPROFILE%\.claude\skills\`:
+
+```powershell
+Expand-Archive .\capturing-screenshots-with-snipshot.zip "$env:USERPROFILE\.claude\skills\"
+```
+
+Claude Code la carga en las sesiones que abras después. Más detalles en [docs/cli.md](docs/cli.md#skill-para-claude-code).
+
 ## Compilación
 
 ```powershell
