@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Shapes;
 using Microsoft.UI.Input;
 using System;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Graphics;
@@ -1302,7 +1303,6 @@ namespace SnipShot.Features.Capture.Modes.Rectangular
             CollapseStyleToolbar();
             CoordinatesDisplay.Visibility = Visibility.Collapsed;
             SelectionBorder.Visibility = Visibility.Collapsed;
-            SetShadeVisibility(false);
 
             await Task.Yield();
         }
@@ -1314,136 +1314,67 @@ namespace SnipShot.Features.Capture.Modes.Rectangular
                 return null;
             }
 
+            // Todo se compone fuera de pantalla: se recorta el fondo congelado y se pintan encima
+            // las anotaciones. Antes se quitaban las sombras y se insertaba el fondo en el overlay
+            // para fotografiarlo, y el overlay desaparecía, volvía y se cerraba en un instante.
+            byte[]? annotationPixels = null;
+            int annotationWidth = 0, annotationHeight = 0;
+            if (ShapesCanvas.Children.Count > 0)
+            {
+                // RootGrid tal cual: las sombras locales solo cubren lo que queda fuera de la
+                // selección y el borde de selección ya está oculto, así que dentro del recorte
+                // solo quedan las anotaciones sobre transparente.
+                var renderTarget = new RenderTargetBitmap();
+                await renderTarget.RenderAsync(RootGrid);
+                annotationPixels = (await renderTarget.GetPixelsAsync()).ToArray();
+                annotationWidth = renderTarget.PixelWidth;
+                annotationHeight = renderTarget.PixelHeight;
+            }
+
+            SoftwareBitmap background = BackgroundBitmap;
+            if (background.BitmapPixelFormat != BitmapPixelFormat.Bgra8 ||
+                background.BitmapAlphaMode != BitmapAlphaMode.Premultiplied)
+            {
+                background = SoftwareBitmap.Convert(background, BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied);
+            }
+
+            SoftwareBitmap selection;
             try
             {
-                // Define capture area (defaults to selection)
-                int captureX = rect.X;
-                int captureY = rect.Y;
-                int captureWidth = rect.Width;
-                int captureHeight = rect.Height;
+                int x = Math.Clamp(rect.X - VirtualBounds.X, 0, background.PixelWidth - 1);
+                int y = Math.Clamp(rect.Y - VirtualBounds.Y, 0, background.PixelHeight - 1);
+                int width = Math.Min(rect.Width, background.PixelWidth - x);
+                int height = Math.Min(rect.Height, background.PixelHeight - y);
 
-                // Add border if enabled
-                Border? captureBorder = null;
-                if (_borderEnabled)
-                {
-                    if (!ColorConverter.TryParseHexColor(_borderColorHex, out var color))
-                    {
-                        color = Colors.Black; // Fallback color
-                    }
-                    
-                    double expandedWidth = rect.Width + (2 * _borderThickness);
-                    double expandedHeight = rect.Height + (2 * _borderThickness);
+                var pixels = new byte[background.PixelWidth * background.PixelHeight * 4];
+                background.CopyToBuffer(pixels.AsBuffer());
+                var cropped = PixelCompositor.Crop(
+                    pixels, background.PixelWidth, background.PixelHeight, x, y, width, height,
+                    annotationPixels, annotationWidth, annotationHeight);
 
-                    captureBorder = new Border
-                    {
-                        BorderBrush = ColorConverter.CreateBrush(color),
-                        BorderThickness = new Thickness(_borderThickness),
-                        Width = expandedWidth,
-                        Height = expandedHeight,
-                        IsHitTestVisible = false
-                    };
-                    
-                    Canvas.SetLeft(captureBorder, (rect.X - VirtualBounds.X) - _borderThickness);
-                    Canvas.SetTop(captureBorder, (rect.Y - VirtualBounds.Y) - _borderThickness);
-                    
-                    ShapesCanvas.Children.Add(captureBorder);
-
-                    captureX = (int)(rect.X - _borderThickness);
-                    captureY = (int)(rect.Y - _borderThickness);
-                    captureWidth = (int)(rect.Width + (2 * _borderThickness));
-                    captureHeight = (int)(rect.Height + (2 * _borderThickness));
-                }
-
-                // Crear imagen de fondo temporal para renderizar
-                var backgroundImage = new Image
-                {
-                    Stretch = Stretch.None
-                };
-                
-                var source = new SoftwareBitmapSource();
-                SoftwareBitmap displayBitmap;
-                if (BackgroundBitmap.BitmapPixelFormat != BitmapPixelFormat.Bgra8 ||
-                    BackgroundBitmap.BitmapAlphaMode != BitmapAlphaMode.Premultiplied)
-                {
-                    displayBitmap = SoftwareBitmap.Convert(BackgroundBitmap, BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied);
-                }
-                else
-                {
-                    displayBitmap = BackgroundBitmap;
-                }
-                
-                await source.SetBitmapAsync(displayBitmap);
-                backgroundImage.Source = source;
-                
-                // Insertar al principio del RootGrid (detrás de todo)
-                RootGrid.Children.Insert(0, backgroundImage);
-                await Task.Yield(); // Permitir que se renderice
-
-                // Renderizar el RootGrid completo para capturar fondo + formas
-                var renderTargetBitmap = new RenderTargetBitmap();
-                await renderTargetBitmap.RenderAsync(RootGrid);
-                
-                // Quitar la imagen de fondo temporal
-                RootGrid.Children.Remove(backgroundImage);
-                
-                // Remove the border after rendering
-                if (captureBorder != null)
-                {
-                    ShapesCanvas.Children.Remove(captureBorder);
-                }
-                
-                // Limpiar el SoftwareBitmap de conversión si fue creado
-                if (displayBitmap != BackgroundBitmap)
-                {
-                    displayBitmap.Dispose();
-                }
-                
-                var pixelBuffer = await renderTargetBitmap.GetPixelsAsync();
-                
-                using var fullScreenBitmap = SoftwareBitmap.CreateCopyFromBuffer(
-                    pixelBuffer,
-                    BitmapPixelFormat.Bgra8,
-                    renderTargetBitmap.PixelWidth,
-                    renderTargetBitmap.PixelHeight,
-                    BitmapAlphaMode.Premultiplied);
-
-                int relativeX = captureX - (int)VirtualBounds.X;
-                int relativeY = captureY - (int)VirtualBounds.Y;
-
-                int cropX = Math.Clamp(relativeX, 0, Math.Max(0, fullScreenBitmap.PixelWidth - 1));
-                int cropY = Math.Clamp(relativeY, 0, Math.Max(0, fullScreenBitmap.PixelHeight - 1));
-                int cropWidth = Math.Clamp(captureWidth, 0, fullScreenBitmap.PixelWidth - cropX);
-                int cropHeight = Math.Clamp(captureHeight, 0, fullScreenBitmap.PixelHeight - cropY);
-
-                if (cropWidth <= 0 || cropHeight <= 0)
-                {
-                    return null;
-                }
-
-                using var stream = new InMemoryRandomAccessStream();
-                var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, stream);
-                encoder.SetSoftwareBitmap(fullScreenBitmap);
-                encoder.BitmapTransform.Bounds = new BitmapBounds
-                {
-                    X = (uint)cropX,
-                    Y = (uint)cropY,
-                    Width = (uint)cropWidth,
-                    Height = (uint)cropHeight
-                };
-                encoder.IsThumbnailGenerated = false;
-                await encoder.FlushAsync();
-
-                stream.Seek(0);
-                var decoder = await BitmapDecoder.CreateAsync(stream);
-                return await decoder.GetSoftwareBitmapAsync(
-                    fullScreenBitmap.BitmapPixelFormat,
-                    fullScreenBitmap.BitmapAlphaMode);
+                selection = SoftwareBitmap.CreateCopyFromBuffer(
+                    cropped.AsBuffer(), BitmapPixelFormat.Bgra8, width, height, BitmapAlphaMode.Premultiplied);
             }
-            catch (Exception ex)
+            finally
             {
-                System.Diagnostics.Debug.WriteLine($"Error capturing selection bitmap: {ex.Message}");
-                return null;
+                if (!ReferenceEquals(background, BackgroundBitmap))
+                {
+                    background.Dispose();
+                }
             }
+
+            if (!_borderEnabled)
+            {
+                return selection;
+            }
+
+            var withBorder = await BorderHelper.ApplyBorderAsync(selection, _borderColorHex, _borderThickness);
+            if (withBorder != null && !ReferenceEquals(withBorder, selection))
+            {
+                selection.Dispose();
+                return withBorder;
+            }
+            return selection;
         }
 
         private void HideSelection()

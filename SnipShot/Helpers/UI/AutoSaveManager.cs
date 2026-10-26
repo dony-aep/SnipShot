@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Windows.Graphics.Imaging;
 using Windows.Storage;
 using Windows.Storage.AccessCache;
+using Windows.Storage.Streams;
 
 namespace SnipShot.Helpers.UI
 {
@@ -66,41 +67,64 @@ namespace SnipShot.Helpers.UI
                     return (false, null);
                 }
 
-                string fileName = $"SnipShot_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png";
-                var file = await targetFolder.CreateFileAsync(
-                    fileName,
-                    CreationCollisionOption.GenerateUniqueName);
-
-                SoftwareBitmap bitmapForEncoding = screenshot;
-                if (screenshot.BitmapPixelFormat != BitmapPixelFormat.Bgra8 ||
-                    screenshot.BitmapAlphaMode != BitmapAlphaMode.Premultiplied)
-                {
-                    bitmapForEncoding = SoftwareBitmap.Convert(
-                        screenshot,
-                        BitmapPixelFormat.Bgra8,
-                        BitmapAlphaMode.Premultiplied);
-                }
-
-                using (var fileStream = await file.OpenAsync(FileAccessMode.ReadWrite))
-                {
-                    var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, fileStream);
-                    encoder.SetSoftwareBitmap(bitmapForEncoding);
-                    encoder.BitmapTransform.InterpolationMode = BitmapInterpolationMode.Fant;
-                    encoder.IsThumbnailGenerated = false;
-                    await encoder.FlushAsync();
-                }
-
-                if (!ReferenceEquals(bitmapForEncoding, screenshot))
-                {
-                    bitmapForEncoding.Dispose();
-                }
-
-                return (true, file.Path);
+                return (true, await SaveToFolderAsync(screenshot, targetFolder));
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Auto-save failed: {ex.Message}");
                 return (false, null);
+            }
+        }
+
+        /// <summary>
+        /// Guarda la captura en la carpeta indicada con el nombre del autoguardado, esté este
+        /// activado o no. Lo usa también el control externo.
+        /// </summary>
+        /// <returns>Ruta del archivo creado</returns>
+        public static async Task<string> SaveToFolderAsync(SoftwareBitmap screenshot, StorageFolder folder)
+        {
+            string fileName = $"SnipShot_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png";
+            var file = await folder.CreateFileAsync(
+                fileName,
+                CreationCollisionOption.GenerateUniqueName);
+
+            using (var fileStream = await file.OpenAsync(FileAccessMode.ReadWrite))
+            {
+                await EncodePngAsync(screenshot, fileStream);
+            }
+
+            return file.Path;
+        }
+
+        /// <summary>
+        /// Codifica la captura como PNG en el stream indicado.
+        /// </summary>
+        public static async Task EncodePngAsync(SoftwareBitmap screenshot, IRandomAccessStream stream)
+        {
+            SoftwareBitmap bitmapForEncoding = screenshot;
+            if (screenshot.BitmapPixelFormat != BitmapPixelFormat.Bgra8 ||
+                screenshot.BitmapAlphaMode != BitmapAlphaMode.Premultiplied)
+            {
+                bitmapForEncoding = SoftwareBitmap.Convert(
+                    screenshot,
+                    BitmapPixelFormat.Bgra8,
+                    BitmapAlphaMode.Premultiplied);
+            }
+
+            try
+            {
+                var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, stream);
+                encoder.SetSoftwareBitmap(bitmapForEncoding);
+                encoder.BitmapTransform.InterpolationMode = BitmapInterpolationMode.Fant;
+                encoder.IsThumbnailGenerated = false;
+                await encoder.FlushAsync();
+            }
+            finally
+            {
+                if (!ReferenceEquals(bitmapForEncoding, screenshot))
+                {
+                    bitmapForEncoding.Dispose();
+                }
             }
         }
 

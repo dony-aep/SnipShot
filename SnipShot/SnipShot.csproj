@@ -51,6 +51,19 @@
   </ItemGroup>
 
   <!--
+    El CLI (comando snipshot) viaja dentro del mismo paquete MSIX. La referencia solo sirve
+    para que su ejecutable acabe en la salida que se empaqueta; la app no usa su código.
+
+    Comparte el runtime autocontenido de la app, y el trimming de Release borra todo lo que
+    la app no usa: SnipShot.Cli.dll, System.Console, System.IO.Pipes... Declararlo raíz hace
+    que ILLink lo conserve junto con las partes del runtime de las que depende.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\SnipShot.Cli\SnipShot.Cli.csproj" />
+    <TrimmerRootAssembly Include="SnipShot.Cli" />
+  </ItemGroup>
+
+  <!--
     Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution
     Explorer "Package and Publish" context menu entry to be enabled for this project even if
     the Windows App SDK Nuget package has not yet been restored.
@@ -74,6 +87,11 @@
     <NoWarn>$(NoWarn);IL2104</NoWarn>
     <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
     <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
+    <!--
+      Sin sello de tiempo, un paquete deja de poder instalarse el día que caduca el certificado.
+      Con él sigue siendo válido, porque la firma se comprueba contra la fecha en que se hizo.
+    -->
+    <AppxPackageSigningTimestampServerUrl>http://timestamp.digicert.com</AppxPackageSigningTimestampServerUrl>
     <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
     <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
     <GenerateTestArtifacts>True</GenerateTestArtifacts>
@@ -81,6 +99,11 @@
     <AppxBundlePlatforms>x64|arm64</AppxBundlePlatforms>
     <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
     <SupportedOSPlatformVersion>10.0.22621.0</SupportedOSPlatformVersion>
-    <PackageCertificateKeyFile>SnipShot_TemporaryKey.pfx</PackageCertificateKeyFile>
+    <!--
+      Se firma con el certificado instalado en Cert:\CurrentUser\My, no con un .pfx dentro del
+      proyecto: así la clave no vive junto al código y la compilación no pide contraseña. La copia
+      de seguridad con contraseña se guarda fuera del repositorio.
+    -->
+    <PackageCertificateThumbprint>FBDFD845E02CE1A9BD786A47A3E8681B4776C2FA</PackageCertificateThumbprint>
   </PropertyGroup>
 </Project>

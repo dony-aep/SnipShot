@@ -27,7 +27,7 @@ Una aplicación de captura de pantalla moderna para Windows desarrollada con Win
 - **Acerca de dinámico** - La sección Acerca de en Configuración muestra versión y año actualizados automáticamente
 - **Guardado automático** - Guarda automáticamente las capturas en tu carpeta preferida (activado por defecto)
 - **Delay configurable** - Programa capturas con retraso de 3, 5 o 10 segundos
-- **Atajos de teclado** - Ctrl+Shift+S y Print Screen configurables con copia al portapapeles y notificación nativa
+- **Atajos de teclado** - Ctrl+Shift+S y Print Screen configurables con copia al portapapeles y notificación nativa, sin abrir la ventana si la app está en la bandeja
 - **Bandeja del sistema** - Minimiza a la bandeja para acceso rápido
 - **Inicio con Windows** - Opción activada por defecto; al arrancar por inicio de sesión se ejecuta en segundo plano
 - **Borde personalizable** - Añade bordes con color y grosor configurable
@@ -35,6 +35,11 @@ Una aplicación de captura de pantalla moderna para Windows desarrollada con Win
 - **Zoom** - Acerca y aleja las capturas para edición precisa
 - **Deshacer/Rehacer** - Historial completo de cambios en las anotaciones
 - **Rotación de formas** - Rota formas y anotaciones libremente
+
+### Control desde la terminal
+- **Comando `snipshot`** - Pide capturas desde la terminal, un script o un agente de IA y recibe la ruta del PNG en JSON: pantalla completa, una ventana concreta aunque esté tapada, una región por coordenadas, o un área, forma libre o ventana que eliges en el overlay
+- **Lista de ventanas** - `snipshot list-windows` muestra las ventanas capturables con su título y proceso
+- **Desactivado por defecto** - Solo funciona con la opción «Permitir control externo» activada en Configuración
 
 ## Tecnologías
 
@@ -65,15 +70,27 @@ El paquete está firmado con un certificado autofirmado, así que la primera vez
 confiar en él. En PowerShell **como administrador**:
 
 ```powershell
-Import-Certificate -FilePath .\SnipShot_1.2.0.0_x64_arm64.cer `
+Import-Certificate -FilePath .\SnipShot_1.3.0.0_x64_arm64.cer `
     -CertStoreLocation Cert:\LocalMachine\TrustedPeople
 ```
 
 Después ya se puede instalar el paquete con doble clic, o desde PowerShell:
 
 ```powershell
-Add-AppxPackage .\SnipShot_1.2.0.0_x64_arm64.msixbundle
+Add-AppxPackage .\SnipShot_1.3.0.0_x64_arm64.msixbundle
 ```
+
+## Uso desde la terminal
+
+Activa «Permitir control externo» en Configuración > General y abre una terminal nueva:
+
+```powershell
+snipshot list-windows
+snipshot capture window --process notepad
+snipshot capture region --rect 0,0,800,600 --out captura.png
+```
+
+Cada comando responde con una línea JSON con la ruta del PNG y sale con un código que resume el resultado. Comandos, opciones, códigos de salida y uso desde agentes de IA en [docs/cli.md](docs/cli.md).
 
 ## Compilación
 

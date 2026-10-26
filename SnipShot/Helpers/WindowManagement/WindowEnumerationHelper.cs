@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using Windows.Graphics;
@@ -65,6 +66,7 @@ namespace SnipShot.Helpers.WindowManagement
         public static IReadOnlyList<WindowInfo> GetCaptureableWindows(IntPtr appWindowHandle, bool includeOwnWindow = false)
         {
             var windows = new List<WindowInfo>();
+            var processNames = new Dictionary<uint, string>();
 
             EnumWindows((hwnd, lParam) =>
             {
@@ -75,13 +77,34 @@ namespace SnipShot.Helpers.WindowManagement
                         ? windowTitle
                         : "Ventana sin título";
 
-                    windows.Add(new WindowInfo(hwnd, bounds, title));
+                    GetWindowThreadProcessId(hwnd, out uint pid);
+                    if (!processNames.TryGetValue(pid, out var processName))
+                    {
+                        processName = TryGetProcessName(pid);
+                        processNames[pid] = processName;
+                    }
+
+                    windows.Add(new WindowInfo(hwnd, bounds, title, (int)pid, processName));
                 }
 
                 return true;
             }, IntPtr.Zero);
 
             return windows;
+        }
+
+        private static string TryGetProcessName(uint pid)
+        {
+            try
+            {
+                using var process = Process.GetProcessById((int)pid);
+                return process.ProcessName;
+            }
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+            {
+                // El proceso terminó entre la enumeración y la consulta.
+                return string.Empty;
+            }
         }
 
         /// <summary>

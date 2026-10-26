@@ -20,6 +20,7 @@ using Windows.Foundation.Collections;
 using Windows.Storage;
 using Microsoft.Windows.AppLifecycle;
 using SnipShot.Models;
+using SnipShot.Services;
 using static SnipShot.Models.NativeMethods;
 
 // To learn more about WinUI, the WinUI project structure,
@@ -74,7 +75,8 @@ namespace SnipShot
                 return;
             }
 
-            var launchHiddenOnStartup = IsStartupTaskLaunch(args);
+            var launchHiddenOnStartup = IsStartupTaskLaunch(args)
+                || Environment.GetCommandLineArgs().Contains(ControlProtocol.BackgroundLaunchArgument);
 
             _window = new MainWindow(launchHiddenOnStartup);
             _window.Activate();

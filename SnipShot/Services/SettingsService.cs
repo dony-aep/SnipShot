@@ -24,6 +24,7 @@ namespace SnipShot.Services
         private const string CTRL_SHIFT_S_HOTKEY_ENABLED_KEY = "CtrlShiftSHotkeyEnabled";
         private const string MINIMIZE_TO_TRAY_KEY = "MinimizeToTray";
         private const string START_WITH_WINDOWS_KEY = "StartWithWindows";
+        private const string EXTERNAL_CONTROL_ENABLED_KEY = "ExternalControlEnabled";
 
         // Valores predeterminados
         private const string DEFAULT_THEME = "Default";
@@ -37,6 +38,8 @@ namespace SnipShot.Services
         private const bool DEFAULT_CTRL_SHIFT_S_HOTKEY_ENABLED = true;
         private const bool DEFAULT_MINIMIZE_TO_TRAY = true;
         private const bool DEFAULT_START_WITH_WINDOWS = true;
+        // Desactivado: cualquier proceso del usuario podría pedir capturas sin que se note.
+        private const bool DEFAULT_EXTERNAL_CONTROL_ENABLED = false;
 
         public SettingsService()
         {
@@ -406,6 +409,23 @@ namespace SnipShot.Services
         public void SaveStartWithWindowsEnabled(bool enabled)
         {
             SaveSetting(START_WITH_WINDOWS_KEY, enabled);
+        }
+
+        /// <summary>
+        /// Obtiene si el comando snipshot puede controlar la aplicación.
+        /// </summary>
+        public bool GetExternalControlEnabled()
+        {
+            return GetSetting(EXTERNAL_CONTROL_ENABLED_KEY, DEFAULT_EXTERNAL_CONTROL_ENABLED);
+        }
+
+        /// <summary>
+        /// Guarda la preferencia de control externo.
+        /// </summary>
+        /// <param name="enabled">True para habilitar, False para deshabilitar.</param>
+        public void SaveExternalControlEnabled(bool enabled)
+        {
+            SaveSetting(EXTERNAL_CONTROL_ENABLED_KEY, enabled);
         }
 
         /// <summary>

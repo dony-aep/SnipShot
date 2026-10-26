@@ -288,12 +288,30 @@ namespace SnipShot.Features.Capture.Windows
         }
 
         /// <summary>
+        /// Cancela la captura desde fuera, igual que si el usuario pulsara Esc. La usa el
+        /// comando snipshot cuando se agota el tiempo de espera.
+        /// </summary>
+        public void CancelCapture()
+        {
+            if (_overlayClosed) return;
+            OnModeCaptureCancelled(this, EventArgs.Empty);
+        }
+
+        /// <summary>
         /// Cierra el overlay
         /// </summary>
         public void CloseOverlay()
         {
             if (_overlayClosed) return;
             _overlayClosed = true;
+
+            // Ocultar antes de limpiar y cerrar: con la ventana aún a la vista, desmontar el
+            // modo y destruir la ventana dejaba ver un fotograma negro al terminar la captura.
+            try
+            {
+                AppWindow.Hide();
+            }
+            catch { }
 
             // Limpiar el modo actual
             if (_currentMode != null)

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Windows.Graphics;
@@ -114,6 +116,15 @@ namespace SnipShot.Services
         }
 
         /// <summary>
+        /// Captura una ventana concreta, sin overlay de selección. La usa el comando snipshot.
+        /// </summary>
+        public async Task<SoftwareBitmap?> CaptureWindowByHandleAsync(IntPtr windowHandle)
+        {
+            var screenshot = await _screenCaptureService.CaptureWindowAsync(windowHandle);
+            return screenshot == null ? null : await ApplyBorderIfEnabledAsync(screenshot);
+        }
+
+        /// <summary>
         /// Ejecuta una captura de pantalla completa
         /// </summary>
         public async Task<SoftwareBitmap?> CaptureFullScreenAsync()
@@ -130,9 +141,62 @@ namespace SnipShot.Services
         }
 
         /// <summary>
+        /// Captura una región de pantalla sin overlay. La usa el comando snipshot con --rect.
+        /// </summary>
+        public async Task<SoftwareBitmap?> CaptureRegionDirectAsync(int x, int y, int width, int height)
+        {
+            var screenshot = await _screenCaptureService.CaptureRegionAsync(x, y, width, height);
+            return screenshot == null ? null : await ApplyBorderIfEnabledAsync(screenshot);
+        }
+
+        /// <summary>
+        /// Recorta una región, en coordenadas de pantalla, del fondo congelado de un overlay.
+        /// La región se ajusta a los límites del fondo (una ventana puede salirse de pantalla).
+        /// </summary>
+        private static SoftwareBitmap? CropFromBackground(SoftwareBitmap background, RectInt32 virtualBounds, RectInt32 region)
+        {
+            int x = Math.Clamp(region.X - virtualBounds.X, 0, background.PixelWidth);
+            int y = Math.Clamp(region.Y - virtualBounds.Y, 0, background.PixelHeight);
+            int right = Math.Clamp(region.X - virtualBounds.X + region.Width, 0, background.PixelWidth);
+            int bottom = Math.Clamp(region.Y - virtualBounds.Y + region.Height, 0, background.PixelHeight);
+            if (right <= x || bottom <= y)
+            {
+                return null;
+            }
+
+            // EnsureDisplayFormat no sirve aquí: libera el original, que sigue siendo el fondo del overlay.
+            var source = background.BitmapPixelFormat == BitmapPixelFormat.Bgra8 &&
+                         background.BitmapAlphaMode == BitmapAlphaMode.Premultiplied
+                ? background
+                : SoftwareBitmap.Convert(background, BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied);
+            try
+            {
+                var pixels = new byte[source.PixelWidth * source.PixelHeight * 4];
+                source.CopyToBuffer(pixels.AsBuffer());
+                var cropped = PixelCompositor.Crop(pixels, source.PixelWidth, source.PixelHeight, x, y, right - x, bottom - y);
+                return SoftwareBitmap.CreateCopyFromBuffer(
+                    cropped.AsBuffer(), BitmapPixelFormat.Bgra8, right - x, bottom - y, BitmapAlphaMode.Premultiplied);
+            }
+            finally
+            {
+                if (!ReferenceEquals(source, background))
+                {
+                    source.Dispose();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Cierra el overlay como si el usuario pulsara Esc cuando se cancela el token. El token se
+        /// cancela desde otro hilo y el overlay solo se puede tocar desde el suyo.
+        /// </summary>
+        private static CancellationTokenRegistration RegisterOverlayCancellation(ShadeOverlayWindow overlay, CancellationToken cancellationToken) =>
+            cancellationToken.Register(() => overlay.DispatcherQueue.TryEnqueue(overlay.CancelCapture));
+
+        /// <summary>
         /// Ejecuta una captura rectangular con overlay de selección
         /// </summary>
-        public async Task<SoftwareBitmap?> CaptureRectangularAsync()
+        public async Task<SoftwareBitmap?> CaptureRectangularAsync(CancellationToken cancellationToken = default)
         {
             // 1. Capturar la pantalla mientras la ventana principal está cloaked
             var fullScreenBitmap = await _screenCaptureService.CaptureFullScreenAsync();
@@ -204,6 +268,8 @@ namespace SnipShot.Services
                 completionSource.TrySetResult(false);
             };
 
+            using var cancellation = RegisterOverlayCancellation(overlay, cancellationToken);
+
             try
             {
                 await overlay.WaitForCompletionAsync();
@@ -222,7 +288,7 @@ namespace SnipShot.Services
         /// Usar este método cuando las ventanas deben enumerarse antes de ocultar la aplicación.
         /// </summary>
         /// <param name="availableWindows">Lista de ventanas ya enumeradas</param>
-        public async Task<SoftwareBitmap?> CaptureWindowAsync(IReadOnlyList<WindowInfo> availableWindows)
+        public async Task<SoftwareBitmap?> CaptureWindowAsync(IReadOnlyList<WindowInfo> availableWindows, CancellationToken cancellationToken = default)
         {
             if (availableWindows.Count == 0)
             {
@@ -251,7 +317,8 @@ namespace SnipShot.Services
                     resultBitmap = bitmap;
                     completionSource.TrySetResult(true);
                 },
-                () => completionSource.TrySetResult(false));
+                () => completionSource.TrySetResult(false),
+                cancellationToken);
 
             await completionSource.Task;
             return resultBitmap;
@@ -307,7 +374,8 @@ namespace SnipShot.Services
             RectInt32 virtualBounds, 
             IReadOnlyList<WindowInfo> availableWindows,
             Action<SoftwareBitmap> onCompleted,
-            Action onCancelled)
+            Action onCancelled,
+            CancellationToken cancellationToken = default)
         {
             var overlay = new ShadeOverlayWindow(
                 backgroundBitmap, 
@@ -329,12 +397,12 @@ namespace SnipShot.Services
                 }
                 else if (args.SelectedRegion.HasValue)
                 {
+                    // Se recorta la imagen congelada que mostraba el overlay, como en los modos
+                    // rectangular y libre, en vez de cerrar el overlay y volver a capturar la
+                    // pantalla: así se guarda exactamente lo que el usuario vio al elegir. Va
+                    // antes de cualquier await porque el fondo se libera al cerrarse el overlay.
+                    var screenshot = CropFromBackground(backgroundBitmap, virtualBounds, args.SelectedRegion.Value);
                     overlay.CloseOverlay();
-                    await Task.Delay(75);
-
-                    var region = args.SelectedRegion.Value;
-                    var screenshot = await _screenCaptureService.CaptureRegionAsync(
-                        region.X, region.Y, region.Width, region.Height);
 
                     if (screenshot != null)
                     {
@@ -355,6 +423,8 @@ namespace SnipShot.Services
                 onCancelled();
             };
 
+            using var cancellation = RegisterOverlayCancellation(overlay, cancellationToken);
+
             try
             {
                 await overlay.WaitForCompletionAsync();
@@ -369,7 +439,7 @@ namespace SnipShot.Services
         /// <summary>
         /// Ejecuta una captura de forma libre con overlay de selección
         /// </summary>
-        public async Task<SoftwareBitmap?> CaptureFreeFormAsync()
+        public async Task<SoftwareBitmap?> CaptureFreeFormAsync(CancellationToken cancellationToken = default)
         {
             // 1. Capturar la pantalla mientras la ventana principal está cloaked
             var backgroundBitmap = await _screenCaptureService.CaptureFullScreenAsync();
@@ -393,7 +463,8 @@ namespace SnipShot.Services
                     resultBitmap = bitmap;
                     completionSource.TrySetResult(true);
                 },
-                () => completionSource.TrySetResult(false));
+                () => completionSource.TrySetResult(false),
+                cancellationToken);
 
             await completionSource.Task;
             return resultBitmap;
@@ -406,7 +477,8 @@ namespace SnipShot.Services
             SoftwareBitmap backgroundBitmap,
             RectInt32 virtualBounds,
             Action<SoftwareBitmap> onCompleted,
-            Action onCancelled)
+            Action onCancelled,
+            CancellationToken cancellationToken = default)
         {
             var overlay = new ShadeOverlayWindow(
                 backgroundBitmap,
@@ -459,6 +531,8 @@ namespace SnipShot.Services
             {
                 onCancelled();
             };
+
+            using var cancellation = RegisterOverlayCancellation(overlay, cancellationToken);
 
             try
             {

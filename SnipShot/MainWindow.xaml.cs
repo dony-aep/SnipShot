@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -92,6 +94,8 @@ namespace SnipShot
         private UIStateManager? _uiStateManager;
         private HotkeyService? _hotkeyService;
         private NativeSystemTrayService? _systemTrayService;
+        private ExternalControlService? _externalControlService;
+        private readonly SemaphoreSlim _externalCaptureGate = new(1, 1);
         private bool _isReallyClosing;
         private bool _minimizeToTray = true;
         private string? _currentDisplayedFilePath;
@@ -218,6 +222,7 @@ namespace SnipShot
             SettingsView.CtrlShiftSHotkeyChanged += SettingsView_CtrlShiftSHotkeyChanged;
             SettingsView.MinimizeToTrayChanged += SettingsView_MinimizeToTrayChanged;
             SettingsView.StartWithWindowsChanged += SettingsView_StartWithWindowsChanged;
+            SettingsView.ExternalControlChanged += SettingsView_ExternalControlChanged;
 
             // Inicializar el servicio de System Tray nativo (sin H.NotifyIcon para mejor rendimiento)
             _systemTrayService = new NativeSystemTrayService(this);
@@ -225,6 +230,14 @@ namespace SnipShot
             _systemTrayService.CaptureRequested += SystemTrayService_CaptureRequested;
             _systemTrayService.ExitRequested += SystemTrayService_ExitRequested;
             _systemTrayService.Initialize();
+
+            _externalControlService = new ExternalControlService(DispatcherQueue, HandleExternalControlRequestAsync);
+            var externalControlEnabled = _settingsService.GetExternalControlEnabled();
+            SettingsView.SetExternalControlPreference(externalControlEnabled);
+            if (externalControlEnabled)
+            {
+                _externalControlService.Start();
+            }
 
             // Configurar evento de cierre para minimizar al tray
             this.Closed += MainWindow_Closed;
@@ -580,8 +593,11 @@ namespace SnipShot
 
         private async Task<SoftwareBitmap?> CaptureWindowAsync(IntPtr appWindowHandle)
         {
-            // Enumerar ventanas ANTES de ocultar la aplicación para incluirla en la lista
-            var availableWindows = WindowEnumerationHelper.GetCaptureableWindows(appWindowHandle, includeOwnWindow: true);
+            // Enumerar ventanas ANTES de ocultar la aplicación. Solo se ofrece la propia app si va a
+            // seguir visible: el overlay recorta del fondo capturado, y con la app oculta el
+            // recorte mostraría lo que hay detrás de ella.
+            var availableWindows = WindowEnumerationHelper.GetCaptureableWindows(
+                appWindowHandle, includeOwnWindow: !_windowVisibilityManager!.HideOnCapture);
 
             if (availableWindows.Count == 0)
             {
@@ -672,6 +688,9 @@ namespace SnipShot
                 return;
             }
 
+            // «Nueva captura» desde el botón o la bandeja lleva la captura al editor, así que la
+            // ventana tiene que verse aunque la app estuviera en la bandeja o minimizada.
+            ShowFromTray();
             await ShowCapturePreview(bitmap, true);
         }
 
@@ -916,6 +935,22 @@ namespace SnipShot
             _settingsService?.SaveMinimizeToTrayEnabled(enabled);
         }
 
+        private void SettingsView_ExternalControlChanged(object? sender, bool enabled)
+        {
+            // Sin pipe abierto no hay nada que pueda conectarse, así que desactivar la opción
+            // basta para que el comando snipshot deje de tener efecto.
+            if (enabled)
+            {
+                _externalControlService?.Start();
+            }
+            else
+            {
+                _externalControlService?.Stop();
+            }
+
+            _settingsService?.SaveExternalControlEnabled(enabled);
+        }
+
         private async void SettingsView_StartWithWindowsChanged(object? sender, bool enabled)
         {
             var success = await StartupService.SetStartupEnabledAsync(enabled);
@@ -959,7 +994,207 @@ namespace SnipShot
                 // Limpieza al cerrar realmente
                 _systemTrayService?.Dispose();
                 _hotkeyService?.Dispose();
+                _externalControlService?.Dispose();
             }
+        }
+
+        /// <summary>
+        /// Atiende las peticiones del comando snipshot. Se ejecuta en el hilo de UI.
+        /// </summary>
+        private async Task<ControlResponse> HandleExternalControlRequestAsync(ControlRequest request)
+        {
+            switch (request.Command)
+            {
+                case ControlProtocol.Commands.Status:
+                    var status = new StatusInfo(
+                        UpdateService.CurrentVersion.ToString(),
+                        Environment.ProcessId,
+                        _autoSaveManager!.AutoSaveFolderPath);
+                    return new ControlResponse { Ok = true, Status = status };
+
+                case ControlProtocol.Commands.Capture:
+                    return await CaptureForExternalControlAsync(request);
+
+                case ControlProtocol.Commands.ListWindows:
+                    return new ControlResponse { Ok = true, Windows = GetCaptureableWindowsForExternalControl() };
+
+                default:
+                    return ControlResponse.Failure(
+                        ControlProtocol.ErrorCodes.UnknownCommand, $"Comando desconocido: {request.Command}.");
+            }
+        }
+
+        /// <summary>
+        /// Captura para el comando snipshot: guarda el PNG y devuelve su ruta, sin abrir el
+        /// editor ni cambiar el estado de la ventana.
+        /// </summary>
+        private async Task<ControlResponse> CaptureForExternalControlAsync(ControlRequest request)
+        {
+            // Una sola captura a la vez: un segundo overlay taparía al primero.
+            if (!await _externalCaptureGate.WaitAsync(0))
+            {
+                return ControlResponse.Failure(ControlProtocol.ErrorCodes.Busy,
+                    "Ya hay una captura en curso. Espera a que termine y vuelve a intentarlo.");
+            }
+
+            try
+            {
+                return await CaptureForExternalControlCoreAsync(request);
+            }
+            finally
+            {
+                _externalCaptureGate.Release();
+            }
+        }
+
+        private async Task<ControlResponse> CaptureForExternalControlCoreAsync(ControlRequest request)
+        {
+            WindowEntry? window = null;
+            if (request.Mode == ControlProtocol.CaptureModes.Window && !request.Interactive)
+            {
+                var matches = ControlProtocol.FindWindows(GetCaptureableWindowsForExternalControl(), request);
+                if (matches.Length == 0)
+                {
+                    return ControlResponse.Failure(ControlProtocol.ErrorCodes.NotFound,
+                        "Ninguna ventana capturable coincide. Las minimizadas no se pueden capturar. "
+                        + "Usa snipshot list-windows para ver las disponibles.");
+                }
+                if (matches.Length > 1)
+                {
+                    return new ControlResponse
+                    {
+                        Ok = false,
+                        Error = new ControlError(ControlProtocol.ErrorCodes.Ambiguous,
+                            $"Coinciden {matches.Length} ventanas; repite la captura con --hwnd de la que quieras."),
+                        Windows = matches,
+                    };
+                }
+                window = matches[0];
+            }
+
+            var interactive = ControlProtocol.IsInteractive(request);
+            var timeoutSeconds = ControlProtocol.GetTimeoutSeconds(request);
+            using var timeout = interactive
+                ? new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds + request.DelaySeconds))
+                : null;
+            var cancellationToken = timeout?.Token ?? CancellationToken.None;
+            var delay = request.DelaySeconds;
+
+            var bitmap = request.Mode switch
+            {
+                ControlProtocol.CaptureModes.Window when window is not null =>
+                    await CaptureWindowForExternalControlAsync(window, delay),
+                ControlProtocol.CaptureModes.Window =>
+                    await CaptureInteractiveWindowForExternalControlAsync(delay, cancellationToken),
+                ControlProtocol.CaptureModes.Region when request.Rect is { } rect =>
+                    await CaptureWithAppHiddenAsync(
+                        () => _captureOrchestrator!.CaptureRegionDirectAsync(rect.X, rect.Y, rect.Width, rect.Height), delay),
+                ControlProtocol.CaptureModes.Region =>
+                    await CaptureWithAppHiddenAsync(() => _captureOrchestrator!.CaptureRectangularAsync(cancellationToken), delay),
+                ControlProtocol.CaptureModes.FreeForm =>
+                    await CaptureWithAppHiddenAsync(() => _captureOrchestrator!.CaptureFreeFormAsync(cancellationToken), delay),
+                _ =>
+                    await CaptureWithAppHiddenAsync(() => _captureOrchestrator!.CaptureFullScreenAsync(), delay),
+            };
+
+            if (bitmap == null)
+            {
+                if (interactive)
+                {
+                    return timeout!.IsCancellationRequested
+                        ? ControlResponse.Failure(ControlProtocol.ErrorCodes.Timeout,
+                            $"No se completó la selección en {timeoutSeconds} segundos y se cerró el overlay.")
+                        : ControlResponse.Failure(ControlProtocol.ErrorCodes.Cancelled, "El usuario canceló la captura.");
+                }
+
+                return ControlResponse.Failure(ControlProtocol.ErrorCodes.Internal,
+                    window is null ? "No se pudo capturar la pantalla." : $"No se pudo capturar la ventana {window.Hwnd}.");
+            }
+
+            using (bitmap)
+            {
+                string path;
+                try
+                {
+                    if (request.Out is { } outPath)
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
+                        using var stream = new FileStream(outPath, FileMode.Create, FileAccess.ReadWrite);
+                        await AutoSaveManager.EncodePngAsync(bitmap, stream.AsRandomAccessStream());
+                        path = outPath;
+                    }
+                    else
+                    {
+                        var folder = await _autoSaveManager!.GetAutoSaveFolderAsync();
+                        if (folder == null)
+                        {
+                            return ControlResponse.Failure(ControlProtocol.ErrorCodes.Internal,
+                                $"No se encontró la carpeta de autoguardado: {_autoSaveManager.AutoSaveFolderPath}.");
+                        }
+                        path = await AutoSaveManager.SaveToFolderAsync(bitmap, folder);
+                    }
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    return ControlResponse.Failure(ControlProtocol.ErrorCodes.Internal, $"No se pudo guardar la captura: {ex.Message}");
+                }
+
+                if (request.Clipboard)
+                {
+                    await ClipboardHelper.CopyImageToClipboardAsync(bitmap);
+                }
+
+                return new ControlResponse
+                {
+                    Ok = true,
+                    Capture = new CaptureResult(path, bitmap.PixelWidth, bitmap.PixelHeight, request.Mode!) { Window = window },
+                };
+            }
+        }
+
+        private async Task<SoftwareBitmap?> CaptureWithAppHiddenAsync(Func<Task<SoftwareBitmap?>> capture, int delaySeconds)
+        {
+            SoftwareBitmap? bitmap = null;
+            await _windowVisibilityManager!.ExecuteWithHiddenWindowAsync(async () => bitmap = await capture(), delaySeconds);
+            return bitmap;
+        }
+
+        /// <summary>
+        /// PrintWindow solo dibuja la ventana pedida, así que no hace falta ocultar SnipShot.
+        /// </summary>
+        private async Task<SoftwareBitmap?> CaptureWindowForExternalControlAsync(WindowEntry window, int delaySeconds)
+        {
+            if (delaySeconds > 0)
+            {
+                await Task.Delay(delaySeconds * 1000);
+            }
+
+            return await _captureOrchestrator!.CaptureWindowByHandleAsync(new IntPtr(window.Hwnd));
+        }
+
+        /// <summary>
+        /// Overlay de selección de ventana.
+        /// </summary>
+        private async Task<SoftwareBitmap?> CaptureInteractiveWindowForExternalControlAsync(int delaySeconds, CancellationToken cancellationToken)
+        {
+            // El overlay recorta la ventana elegida del fondo capturado con SnipShot ya oculta: si
+            // se ofreciera la propia app, el recorte mostraría lo que hay detrás de ella.
+            var appWindowHandle = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            var availableWindows = WindowEnumerationHelper.GetCaptureableWindows(
+                appWindowHandle, includeOwnWindow: !_windowVisibilityManager!.HideOnCapture);
+
+            return await CaptureWithAppHiddenAsync(
+                () => _captureOrchestrator!.CaptureWindowAsync(availableWindows, cancellationToken), delaySeconds);
+        }
+
+        private WindowEntry[] GetCaptureableWindowsForExternalControl()
+        {
+            var appWindowHandle = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            return WindowEnumerationHelper.GetCaptureableWindows(appWindowHandle, includeOwnWindow: true)
+                .Select(w => new WindowEntry(
+                    w.Handle.ToInt64(), w.Title, w.ProcessName, w.ProcessId,
+                    w.Bounds.X, w.Bounds.Y, w.Bounds.Width, w.Bounds.Height))
+                .ToArray();
         }
 
         private void HideToTray()

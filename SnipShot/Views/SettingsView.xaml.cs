@@ -91,6 +91,11 @@ namespace SnipShot.Views
         /// </summary>
         public event EventHandler<bool>? StartWithWindowsChanged;
 
+        /// <summary>
+        /// Se dispara cuando el usuario cambia la preferencia de control externo.
+        /// </summary>
+        public event EventHandler<bool>? ExternalControlChanged;
+
         private string _currentThemeTag = "Default";
         private bool _autoSaveEnabled;
         private string _autoSaveFolderPathDisplay = string.Empty;
@@ -103,6 +108,7 @@ namespace SnipShot.Views
         private bool _ctrlShiftSHotkeyEnabled;
         private bool _minimizeToTrayEnabled = true;
         private bool _startWithWindowsEnabled;
+        private bool _externalControlEnabled;
         private DialogService? _dialogService;
 
         /// <summary>
@@ -159,6 +165,10 @@ namespace SnipShot.Views
             if (StartWithWindowsToggle != null)
             {
                 ControlStateManager.SetToggleSilently(StartWithWindowsToggle, _startWithWindowsEnabled, StartWithWindowsToggle_Toggled);
+            }
+            if (ExternalControlToggle != null)
+            {
+                ControlStateManager.SetToggleSilently(ExternalControlToggle, _externalControlEnabled, ExternalControlToggle_Toggled);
             }
         }
 
@@ -572,6 +582,35 @@ namespace SnipShot.Views
 
             _startWithWindowsEnabled = newValue;
             StartWithWindowsChanged?.Invoke(this, newValue);
+        }
+
+        /// <summary>
+        /// Establece el valor inicial de la preferencia de control externo.
+        /// </summary>
+        public void SetExternalControlPreference(bool enabled)
+        {
+            _externalControlEnabled = enabled;
+            if (ExternalControlToggle != null)
+            {
+                ControlStateManager.SetToggleSilently(ExternalControlToggle, enabled, ExternalControlToggle_Toggled);
+            }
+        }
+
+        private void ExternalControlToggle_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (ExternalControlToggle == null)
+            {
+                return;
+            }
+
+            var newValue = ExternalControlToggle.IsOn;
+            if (newValue == _externalControlEnabled)
+            {
+                return;
+            }
+
+            _externalControlEnabled = newValue;
+            ExternalControlChanged?.Invoke(this, newValue);
         }
 
         #endregion

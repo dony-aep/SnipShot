@@ -8,11 +8,13 @@ namespace SnipShot.Models
     /// </summary>
     public readonly struct WindowInfo
     {
-        public WindowInfo(IntPtr handle, RectInt32 bounds, string title)
+        public WindowInfo(IntPtr handle, RectInt32 bounds, string title, int processId = 0, string processName = "")
         {
             Handle = handle;
             Bounds = bounds;
             Title = title;
+            ProcessId = processId;
+            ProcessName = processName;
         }
 
         /// <summary>
@@ -29,5 +31,16 @@ namespace SnipShot.Models
         /// Título visible de la ventana.
         /// </summary>
         public string Title { get; }
+
+        /// <summary>
+        /// Proceso dueño de la ventana. El comando snipshot lo usa para elegir ventana por nombre
+        /// de programa, que es más estable que el título.
+        /// </summary>
+        public int ProcessId { get; }
+
+        /// <summary>
+        /// Nombre del proceso sin extensión (p. ej., "Notepad"), o vacío si no se pudo leer.
+        /// </summary>
+        public string ProcessName { get; }
     }
 }
