@@ -118,9 +118,17 @@ namespace SnipShot.Services
         /// <summary>
         /// Captura una ventana concreta, sin overlay de selección. La usa el comando snipshot.
         /// </summary>
-        public async Task<SoftwareBitmap?> CaptureWindowByHandleAsync(IntPtr windowHandle)
+        /// <param name="crop">Parte de la ventana que se conserva, relativa a su esquina superior
+        /// izquierda. Se recorta antes del borde para que el borde rodee el recorte.</param>
+        public async Task<SoftwareBitmap?> CaptureWindowByHandleAsync(IntPtr windowHandle, RectInt32? crop = null)
         {
             var screenshot = await _screenCaptureService.CaptureWindowAsync(windowHandle);
+            if (screenshot != null && crop is { } region)
+            {
+                using var window = screenshot;
+                screenshot = CropFromBackground(window, new RectInt32(0, 0, window.PixelWidth, window.PixelHeight), region);
+            }
+
             return screenshot == null ? null : await ApplyBorderIfEnabledAsync(screenshot);
         }
 
@@ -150,7 +158,8 @@ namespace SnipShot.Services
         }
 
         /// <summary>
-        /// Recorta una región, en coordenadas de pantalla, del fondo congelado de un overlay.
+        /// Recorta una región, en coordenadas de pantalla, del fondo congelado de un overlay, o de
+        /// una captura de ventana con <paramref name="virtualBounds"/> en el origen.
         /// La región se ajusta a los límites del fondo (una ventana puede salirse de pantalla).
         /// </summary>
         private static SoftwareBitmap? CropFromBackground(SoftwareBitmap background, RectInt32 virtualBounds, RectInt32 region)
