@@ -18,6 +18,7 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
 ### Changed
 - La captura de ventana desde el overlay guarda exactamente lo que se veía al elegir, en lugar de cerrar el overlay y volver a capturar la pantalla
+- El paquete se firma con un certificado nuevo, válido hasta 2031, y con sello de tiempo: los paquetes se podrán seguir instalando cuando caduque el certificado. Antes de actualizar desde una versión anterior hay que importar el `.cer` de esta versión
 
 ### Fixed
 - Con la app en la bandeja o minimizada, una captura con atajo de teclado hacía aparecer la ventana; ahora solo se copia al portapapeles con su notificación, y «Nueva captura» sigue mostrando la app con la captura

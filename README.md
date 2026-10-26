@@ -80,6 +80,9 @@ Después ya se puede instalar el paquete con doble clic, o desde PowerShell:
 Add-AppxPackage .\SnipShot_1.3.0.0_x64_arm64.msixbundle
 ```
 
+Si vienes de la 1.2.0 o de una anterior, importa también el `.cer` de la 1.3.0: el certificado
+cambió. La app se actualiza encima de la instalada y conserva su configuración.
+
 ## Uso desde la terminal
 
 Activa «Permitir control externo» en Configuración > General y abre una terminal nueva:
