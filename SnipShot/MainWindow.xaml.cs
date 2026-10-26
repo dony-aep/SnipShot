@@ -1070,6 +1070,11 @@ namespace SnipShot
                     };
                 }
                 window = matches[0];
+
+                if (request.Rect is { } crop && ControlProtocol.ValidateWindowRect(crop, window.Width, window.Height) is { } cropError)
+                {
+                    return ControlResponse.Failure(cropError);
+                }
             }
 
             var interactive = ControlProtocol.IsInteractive(request);
@@ -1083,7 +1088,7 @@ namespace SnipShot
             var bitmap = request.Mode switch
             {
                 ControlProtocol.CaptureModes.Window when window is not null =>
-                    await CaptureWindowForExternalControlAsync(window, delay),
+                    await CaptureWindowForExternalControlAsync(window, request.Rect, delay),
                 ControlProtocol.CaptureModes.Window =>
                     await CaptureInteractiveWindowForExternalControlAsync(delay, cancellationToken),
                 ControlProtocol.CaptureModes.Region when request.Rect is { } rect =>
@@ -1162,14 +1167,15 @@ namespace SnipShot
         /// <summary>
         /// PrintWindow solo dibuja la ventana pedida, así que no hace falta ocultar SnipShot.
         /// </summary>
-        private async Task<SoftwareBitmap?> CaptureWindowForExternalControlAsync(WindowEntry window, int delaySeconds)
+        private async Task<SoftwareBitmap?> CaptureWindowForExternalControlAsync(WindowEntry window, RegionRect? crop, int delaySeconds)
         {
             if (delaySeconds > 0)
             {
                 await Task.Delay(delaySeconds * 1000);
             }
 
-            return await _captureOrchestrator!.CaptureWindowByHandleAsync(new IntPtr(window.Hwnd));
+            return await _captureOrchestrator!.CaptureWindowByHandleAsync(new IntPtr(window.Hwnd),
+                crop is null ? null : new RectInt32(crop.X, crop.Y, crop.Width, crop.Height));
         }
 
         /// <summary>

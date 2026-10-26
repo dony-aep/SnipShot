@@ -4,7 +4,7 @@
 
 ## Requisitos
 
-- SnipShot 1.3.0 o superior. El comando se instala con la app y queda disponible en cualquier terminal nueva; no hay que tocar el PATH.
+- SnipShot 1.3.0 o superior. El comando se instala con la app y queda disponible en cualquier terminal nueva; no hay que tocar el PATH. `--rect` en `capture window` necesita la 1.4.0.
 - La opción **Permitir control externo** activada en Configuración > General. Viene desactivada: mientras lo esté, ningún proceso puede pedir capturas a la app.
 - La terminal y SnipShot con el mismo nivel de elevación. Una terminal abierta como administrador no puede conectar con una app que no lo está.
 
@@ -16,7 +16,8 @@ Si SnipShot está cerrado, cualquier captura lo abre en la bandeja, sin mostrar 
 snipshot status
 snipshot list-windows
 snipshot capture fullscreen
-snipshot capture window   --hwnd <h> | --title <texto> | --process <nombre> | --interactive
+snipshot capture window   --hwnd <h> | --title <texto> | --process <nombre> [--rect <x>,<y>,<ancho>,<alto>]
+snipshot capture window   --interactive
 snipshot capture region   [--rect <x>,<y>,<ancho>,<alto>]
 snipshot capture freeform
 ```
@@ -27,7 +28,8 @@ snipshot capture freeform
 | `list-windows` | Lista las ventanas que se pueden capturar, con handle, título, proceso, PID, posición y tamaño |
 | `capture fullscreen` | Captura todos los monitores |
 | `capture window` | Captura una ventana, aunque esté tapada por otras. Las minimizadas no se pueden capturar |
-| `capture region --rect` | Captura un rectángulo de pantalla sin interacción |
+| `capture window --rect` | Captura solo una parte de la ventana, también aunque esté tapada |
+| `capture region --rect` | Captura un rectángulo de pantalla sin interacción. Sale lo que esté visible en esas coordenadas |
 | `capture region` | Abre el overlay rectangular para que el usuario dibuje el área |
 | `capture freeform` | Abre el overlay de forma libre para que el usuario trace el contorno |
 | `capture window --interactive` | Abre el overlay de ventana para que el usuario haga clic en una |
@@ -45,6 +47,8 @@ Se usa exactamente uno de estos selectores:
 
 Si el selector encaja con varias ventanas, no se captura nada: la respuesta trae las candidatas para repetir con `--hwnd`.
 
+Las apps de la Microsoft Store aparecen en `list-windows` con el proceso `ApplicationFrameHost`, que comparten todas. Para ellas usa `--title` o `--hwnd`.
+
 ### Opciones de captura
 
 | Opción | Efecto |
@@ -54,7 +58,10 @@ Si el selector encaja con varias ventanas, no se captura nada: la respuesta trae
 | `--delay <s>` | Espera de 0 a 30 segundos antes de capturar |
 | `--timeout <s>` | Solo en capturas interactivas: segundos que se espera al usuario, de 5 a 600 (120 por defecto). Al agotarse se cierra el overlay |
 
-Las coordenadas de `--rect` son de pantalla y en píxeles físicos. Un monitor situado a la izquierda o encima del principal tiene coordenadas negativas; las posiciones que devuelve `list-windows` usan el mismo sistema.
+Las coordenadas de `--rect` van en píxeles físicos y su origen depende del modo:
+
+- Con `capture region` son de pantalla. Un monitor situado a la izquierda o encima del principal tiene coordenadas negativas; las posiciones que devuelve `list-windows` usan el mismo sistema.
+- Con `capture window` parten de la esquina superior izquierda de la ventana, igual que los píxeles del PNG que da `capture window` sin `--rect`. El rectángulo tiene que caber en la ventana; si se sale, la respuesta es `invalid_request` con su tamaño. No se combina con `--interactive`.
 
 ## Respuesta
 
@@ -68,7 +75,7 @@ Cada comando escribe una sola línea JSON en la salida estándar.
 {"version":1,"ok":false,"error":{"code":"ambiguous","message":"Coinciden 2 ventanas; repite la captura con --hwnd de la que quieras."},"windows":[...]}
 ```
 
-- `capture` trae `path`, `width`, `height`, `mode` y, en el modo ventana, la ventana capturada.
+- `capture` trae `path`, `width`, `height`, `mode` y, en el modo ventana, la ventana capturada. Con `--rect`, `width` y `height` son los del recorte, y `window` sigue dando la posición y el tamaño de la ventana entera.
 - `list-windows` trae la lista en `windows`.
 - `status` trae `appVersion`, `processId` y `autoSaveFolder`.
 - Los acentos de los mensajes salen escapados (`\u00E1`); cualquier lector de JSON los convierte.
@@ -107,6 +114,13 @@ $ventana = (snipshot list-windows | ConvertFrom-Json).windows | Where-Object pro
 snipshot capture window --hwnd $ventana.hwnd --out capturas\editor.png
 ```
 
+Capturar la barra lateral de Microsoft Store, aunque haya otra ventana encima. Las coordenadas se leen en una captura previa de la ventana entera:
+
+```powershell
+$store = (snipshot list-windows | ConvertFrom-Json).windows | Where-Object title -eq 'Microsoft Store'
+snipshot capture window --hwnd $store.hwnd --rect 0,48,74,984
+```
+
 Capturar un rectángulo fijo del monitor izquierdo y dejarlo en el portapapeles:
 
 ```powershell
@@ -125,9 +139,28 @@ El formato está pensado para que un agente lo use sin interpretar texto: una l�
 
 - «Esta ventana» no es la ventana en primer plano, que será la terminal o la app del propio agente. Si el usuario no la nombra, hay que mostrarle los títulos de `list-windows` y preguntar.
 - `--hwnd`, tomado de `list-windows`, es el único selector que no puede encajar con otra ventana.
+- Para capturar una parte de una ventana, `capture window --rect` es la opción correcta. `capture region --rect` toma lo que hay en pantalla, que suele ser la terminal o la app del agente, y traer la ventana al frente para evitarlo le quita el foco al usuario.
 - Antes de lanzar una captura interactiva hay que avisar al usuario de lo que debe hacer, porque el comando se queda esperando hasta que dibuje, haga clic, cancele o se agote el tiempo.
 - Ante `cancelled` o `timeout` no se debe reintentar sin preguntar.
 - La imagen se puede abrir para comprobar o describir lo capturado.
+
+### Skill para Claude Code
+
+La skill `capturing-screenshots-with-snipshot` le explica todo esto a Claude Code: cuándo capturar, qué selector usar y qué hacer con cada código de salida. Está en [`skills/capturing-screenshots-with-snipshot`](../skills/capturing-screenshots-with-snipshot/SKILL.md), y cada release la adjunta como `.zip`.
+
+Para instalarla en todos tus proyectos, copia la carpeta `capturing-screenshots-with-snipshot` en `%USERPROFILE%\.claude\skills\`. Desde un clon del repositorio:
+
+```powershell
+Copy-Item -Recurse skills\capturing-screenshots-with-snipshot "$env:USERPROFILE\.claude\skills\"
+```
+
+Con el `.zip` de la release:
+
+```powershell
+Expand-Archive .\capturing-screenshots-with-snipshot.zip "$env:USERPROFILE\.claude\skills\"
+```
+
+Para un solo proyecto, cópiala en su carpeta `.claude\skills\`. Claude Code la carga en las sesiones que abras después. Cada versión de la skill describe las opciones de la release con la que se publica: si actualizas SnipShot, sustitúyela por la nueva.
 
 ## Cómo funciona
 

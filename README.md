@@ -70,14 +70,14 @@ El paquete está firmado con un certificado autofirmado, así que la primera vez
 confiar en él. En PowerShell **como administrador**:
 
 ```powershell
-Import-Certificate -FilePath .\SnipShot_1.3.0.0_x64_arm64.cer `
+Import-Certificate -FilePath .\SnipShot_1.4.0.0_x64_arm64.cer `
     -CertStoreLocation Cert:\LocalMachine\TrustedPeople
 ```
 
 Después ya se puede instalar el paquete con doble clic, o desde PowerShell:
 
 ```powershell
-Add-AppxPackage .\SnipShot_1.3.0.0_x64_arm64.msixbundle
+Add-AppxPackage .\SnipShot_1.4.0.0_x64_arm64.msixbundle
 ```
 
 Si vienes de la 1.2.0 o de una anterior, importa también el `.cer` de la 1.3.0: el certificado
@@ -94,6 +94,16 @@ snipshot capture region --rect 0,0,800,600 --out captura.png
 ```
 
 Cada comando responde con una línea JSON con la ruta del PNG y sale con un código que resume el resultado. Comandos, opciones, códigos de salida y uso desde agentes de IA en [docs/cli.md](docs/cli.md).
+
+### Con Claude Code
+
+La skill [`capturing-screenshots-with-snipshot`](skills/capturing-screenshots-with-snipshot/SKILL.md) enseña a Claude Code a usar el comando: elegir la ventana, capturar una parte de ella sin traerla al frente y actuar según el código de salida. Cada release la adjunta como `.zip`. Descomprímelo en `%USERPROFILE%\.claude\skills\`:
+
+```powershell
+Expand-Archive .\capturing-screenshots-with-snipshot.zip "$env:USERPROFILE\.claude\skills\"
+```
+
+Claude Code la carga en las sesiones que abras después. Más detalles en [docs/cli.md](docs/cli.md#skill-para-claude-code).
 
 ## Compilación
 

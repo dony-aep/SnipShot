@@ -166,6 +166,45 @@ public class ControlProtocolTests
     }
 
     [TestMethod]
+    [DataRow("\"mode\":\"window\",\"hwnd\":198220,\"rect\":{\"x\":0,\"y\":48,\"width\":74,\"height\":984}", "parte de una ventana por handle")]
+    [DataRow("\"mode\":\"window\",\"title\":\"Microsoft Store\",\"rect\":{\"x\":10,\"y\":10,\"width\":5,\"height\":5}", "parte de una ventana por título")]
+    public void RectConVentanaElegidaPorSelector_SeAcepta(string campos, string caso)
+    {
+        Assert.IsTrue(ControlProtocol.TryParseRequest(Captura(campos), out var peticion, out var error), $"{caso}: {error?.Message}");
+        Assert.IsNotNull(peticion.Rect, caso);
+    }
+
+    [TestMethod]
+    [DataRow("\"mode\":\"window\",\"interactive\":true,\"rect\":{\"x\":0,\"y\":0,\"width\":10,\"height\":10}", "la ventana interactiva se recorta del fondo congelado")]
+    [DataRow("\"mode\":\"window\",\"hwnd\":1,\"rect\":{\"x\":0,\"y\":0,\"width\":0,\"height\":10}", "ancho cero en una ventana")]
+    public void RectConVentanaIncorrecto_EsPeticionInvalida(string campos, string motivo)
+    {
+        AssertRechazada(Captura(campos), ControlProtocol.ErrorCodes.InvalidRequest, motivo);
+    }
+
+    [TestMethod]
+    [DataRow(0, 0, 1920, 1032, "la ventana entera")]
+    [DataRow(0, 48, 74, 984, "llega justo al borde inferior")]
+    [DataRow(1919, 1031, 1, 1, "el último píxel")]
+    public void RectDentroDeLaVentana_SeAcepta(int x, int y, int ancho, int alto, string caso)
+    {
+        Assert.IsNull(ControlProtocol.ValidateWindowRect(new RegionRect(x, y, ancho, alto), 1920, 1032), caso);
+    }
+
+    [TestMethod]
+    [DataRow(-1, 0, 10, 10, "X negativa: las coordenadas son relativas a la ventana")]
+    [DataRow(0, -1, 10, 10, "Y negativa")]
+    [DataRow(1911, 0, 10, 10, "se sale por la derecha")]
+    [DataRow(0, 48, 74, 985, "se sale por abajo por un píxel")]
+    [DataRow(1920, 0, 1, 1, "empieza fuera de la ventana")]
+    public void RectFueraDeLaVentana_EsPeticionInvalida(int x, int y, int ancho, int alto, string motivo)
+    {
+        var error = ControlProtocol.ValidateWindowRect(new RegionRect(x, y, ancho, alto), 1920, 1032);
+
+        Assert.AreEqual(ControlProtocol.ErrorCodes.InvalidRequest, error?.Code, motivo);
+    }
+
+    [TestMethod]
     [DataRow("region", false, false, true, "región sin rect la dibuja el usuario")]
     [DataRow("region", true, false, false, "región con rect se captura directamente")]
     [DataRow("freeform", false, false, true, "la forma libre siempre es interactiva")]

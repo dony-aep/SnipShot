@@ -178,9 +178,12 @@ namespace SnipShot.Services
 
             if (request.Rect is { } rect)
             {
-                if (request.Mode != CaptureModes.Region)
+                // La ventana interactiva se recorta del fondo congelado: un rect relativo a ella
+                // tendría que esperar a saber cuál elige el usuario.
+                if (request.Mode != CaptureModes.Region && (request.Mode != CaptureModes.Window || request.Interactive))
                 {
-                    return new ControlError(ErrorCodes.InvalidRequest, "rect solo se usa con el modo region.");
+                    return new ControlError(ErrorCodes.InvalidRequest,
+                        "rect solo se usa con el modo region o con una ventana elegida por hwnd, title o process.");
                 }
 
                 if (rect.Width <= 0 || rect.Height <= 0)
@@ -214,6 +217,22 @@ namespace SnipShot.Services
                 {
                     return new ControlError(ErrorCodes.InvalidRequest, $"La captura se guarda como PNG; la ruta debe terminar en .png: {request.Out}.");
                 }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Comprueba que el recorte de una captura de ventana cabe en ella. Se valida contra el
+        /// tamaño que da la enumeración, porque hasta capturar la app no sabe cuánto mide.
+        /// </summary>
+        public static ControlError? ValidateWindowRect(RegionRect rect, int windowWidth, int windowHeight)
+        {
+            if (rect.X < 0 || rect.Y < 0 || rect.X + rect.Width > windowWidth || rect.Y + rect.Height > windowHeight)
+            {
+                return new ControlError(ErrorCodes.InvalidRequest,
+                    $"El rectángulo {rect.X},{rect.Y},{rect.Width},{rect.Height} se sale de la ventana, que mide "
+                    + $"{windowWidth}x{windowHeight}. Con una ventana, las coordenadas parten de su esquina superior izquierda.");
             }
 
             return null;
@@ -326,7 +345,8 @@ namespace SnipShot.Services
         public bool Interactive { get; init; }
 
         /// <summary>
-        /// En el modo region, captura este rectángulo sin overlay. Sin él, el usuario lo dibuja.
+        /// En el modo region, captura este rectángulo sin overlay; sin él, el usuario lo dibuja.
+        /// En el modo window, recorta la captura de la ventana, con coordenadas relativas a ella.
         /// </summary>
         public RegionRect? Rect { get; init; }
 
@@ -337,8 +357,9 @@ namespace SnipShot.Services
     }
 
     /// <summary>
-    /// Rectángulo en coordenadas de pantalla y píxeles físicos. X e Y pueden ser negativos en
-    /// monitores situados a la izquierda o encima del principal.
+    /// Rectángulo en píxeles físicos. En el modo region son coordenadas de pantalla, y X e Y
+    /// pueden ser negativos en monitores situados a la izquierda o encima del principal. En el
+    /// modo window parten de la esquina superior izquierda de la ventana.
     /// </summary>
     internal sealed record RegionRect(int X, int Y, int Width, int Height);
 

@@ -95,6 +95,15 @@ public class CliArgumentsTests
     }
 
     [TestMethod]
+    public void RectConVentana_LlegaJuntoAlSelector()
+    {
+        var peticion = Aceptar("capture", "window", "--hwnd", "198220", "--rect", "0,48,74,984");
+
+        Assert.AreEqual(198220L, peticion.Hwnd);
+        Assert.AreEqual(new RegionRect(0, 48, 74, 984), peticion.Rect);
+    }
+
+    [TestMethod]
     public void InteractiveYTimeout_SeRecogen()
     {
         var peticion = Aceptar("capture", "window", "--interactive", "--timeout", "45");

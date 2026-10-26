@@ -27,7 +27,7 @@ paths:
 2. `CliArguments.cs`: sintaxis y texto de `Usage`.
 3. `MainWindow.HandleExternalControlRequestAsync`: el manejador.
 4. Pruebas en `ControlProtocolTests` y `CliArgumentsTests`, con dientes.
-5. `docs/cli.md` y la skill `capturing-screenshots-with-snipshot` si la tienes.
+5. `docs/cli.md` y la skill `skills/capturing-screenshots-with-snipshot/SKILL.md`, que se publica con cada release.
 6. Prueba con la app instalada (ver «Probar sobre la app instalada» en `CLAUDE.md`).
 
 ## Empaquetado del CLI
