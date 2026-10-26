@@ -94,5 +94,9 @@ Todo el código de la app vive en `SnipShot/`:
 
 - Release compila con `PublishTrimmed` y `PublishReadyToRun`. Si añades reflexión o una librería, ejecuta el `dotnet publish` de arriba. El análisis IL está activo y sale limpio; solo se silencia `IL2104` (de `WinRT.Runtime` y `Microsoft.Windows.SDK.NET`). **No** reintroduzcas `SuppressTrimAnalysisWarnings`.
 - Cada control interactivo lleva `AutomationProperties.AutomationId` igual a su `x:Name`, y `AutomationProperties.Name` si solo tiene icono. Si un tooltip cambia en ejecución, actualiza el `AutomationProperties.Name` en el mismo sitio.
+- Para fijar el valor de un control desde código (por ejemplo en los `Set*Preference` de `SettingsView`), usa `ControlStateManager.SetToggleSilently` o `SetSliderValueSilently`; si no, se dispara su manejador y se crea un bucle de eventos.
+- Para colores usa `SnipShot.Helpers.Utils.ColorConverter`, no `System.Drawing.Color`, que choca con los tipos de WinUI.
+- `DialogService` necesita el `XamlRoot` de un control ya cargado: créalo de forma diferida, como la propiedad `DialogService` de `MainWindow`.
+- Al completar una captura desde un overlay, entrega una copia del bitmap (`SoftwareBitmap.Copy`): el fondo original se libera al cerrarse el overlay.
 - `CHANGELOG.md` sigue Keep a Changelog y Semantic Versioning, en español con tildes. Lo nuevo va en `[Unreleased]`.
 - Si cambias un comando, una opción o un código de salida del CLI, actualiza `docs/cli.md` en el mismo commit.
